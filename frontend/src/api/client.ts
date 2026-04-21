@@ -1,0 +1,60 @@
+const BASE = (import.meta.env.VITE_API_BASE as string) || '';
+
+export class ApiError extends Error {
+  status: number;
+  details?: any;
+  constructor(message: string, status: number, details?: any) {
+    super(message);
+    this.status = status;
+    this.details = details;
+  }
+}
+
+function getToken() {
+  return localStorage.getItem('admin_token');
+}
+
+export async function api<T = any>(
+  path: string,
+  opts: RequestInit & { auth?: boolean } = {}
+): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(opts.headers as Record<string, string> || {}),
+  };
+  if (opts.auth) {
+    const t = getToken();
+    if (t) headers.Authorization = `Bearer ${t}`;
+  }
+  const res = await fetch(`${BASE}${path}`, {
+    ...opts,
+    headers,
+    credentials: 'include',
+  });
+  const ct = res.headers.get('content-type') || '';
+  const body = ct.includes('application/json') ? await res.json() : await res.text();
+  if (!res.ok) {
+    const msg = (body && (body as any).error) || res.statusText;
+    throw new ApiError(msg, res.status, body);
+  }
+  return body as T;
+}
+
+export async function uploadFiles(files: File[], auth = true): Promise<{ path: string; originalName: string }[]> {
+  const fd = new FormData();
+  files.forEach((f) => fd.append(auth ? 'files' : 'file', f));
+  const headers: Record<string, string> = {};
+  if (auth) {
+    const t = getToken();
+    if (t) headers.Authorization = `Bearer ${t}`;
+  }
+  const res = await fetch(`${BASE}/api/upload/${auth ? 'admin' : 'public'}`, {
+    method: 'POST',
+    body: fd,
+    headers,
+    credentials: 'include',
+  });
+  if (!res.ok) throw new ApiError('Upload failed', res.status);
+  const data = await res.json();
+  return auth ? data.files : [{ path: data.path, originalName: data.originalName }];
+}
