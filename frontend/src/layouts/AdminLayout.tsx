@@ -1,18 +1,22 @@
 import { NavLink, Outlet, useNavigate, Navigate } from 'react-router-dom';
-import { getCurrentUser, isLoggedIn, logout } from '../api/auth';
+import { logout } from '../api/auth';
+import { useAuth } from '../context/AuthContext';
 import { ADMIN_ENTITIES } from '../pages/admin/entitiesConfig';
 
 export default function AdminLayout() {
+  const { user, loading, setUser } = useAuth();
   const nav = useNavigate();
-  if (!isLoggedIn()) return <Navigate to="/admin/login" replace />;
-  const user = getCurrentUser();
+
+  if (loading) return <div style={{ padding: '2rem' }}><span className="spinner" /> Се вчитува…</div>;
+  if (!user) return <Navigate to="/admin/login" replace />;
 
   const onLogout = async () => {
     await logout();
+    setUser(null);
     nav('/admin/login');
   };
 
-  const grouped = {
+  const grouped: Record<string, string[]> = {
     Содржина: ['odnosi-so-javnost', 'sluzben-glasnik', 'agenda', 'proekti', 'budzet', 'legislativa'],
     Општина: ['vraboteni', 'institucii'],
     Граѓани: ['prijaveni-problemi'],
@@ -46,7 +50,9 @@ export default function AdminLayout() {
       </aside>
       <main className="admin-main">
         <div className="admin-header">
-          <div style={{ color: 'var(--muted)', fontSize: '.9rem' }}>Најавени како <strong>{user?.name}</strong> ({user?.email})</div>
+          <div style={{ color: 'var(--muted)', fontSize: '.9rem' }}>
+            Најавени како <strong>{user.name}</strong> ({user.email})
+          </div>
           <button className="btn sm primary" onClick={onLogout}>Одјави се</button>
         </div>
         <Outlet />

@@ -1,7 +1,7 @@
-import { Router } from 'express';
-import { eq, desc, asc } from 'drizzle-orm';
+import { Router, type Request, type Response, type NextFunction } from 'express';
+import { eq, desc, asc, type SQL } from 'drizzle-orm';
 import type { PgTable, PgColumn } from 'drizzle-orm/pg-core';
-import { z, ZodTypeAny } from 'zod';
+import { z, type ZodTypeAny } from 'zod';
 import bcrypt from 'bcryptjs';
 import { db } from '../config/db.js';
 import { requireAdmin } from '../middleware/auth.js';
@@ -22,29 +22,8 @@ import {
   institucii,
 } from '../db/schema.js';
 
-// Strongly-typed table with the `id` column we depend on.
-type TableWithId = PgTable & { id: PgColumn };
-// Helper for safe column access by string key.
-const col = (t: TableWithId, k: string): PgColumn => (t as unknown as Record<string, PgColumn>)[k];
-
-interface EntityConfig<TIn extends Record<string, unknown>, TOut extends Record<string, unknown>> {
-  table: TableWithId;
-  orderBy?: { col: string; dir: 'asc' | 'desc' };
-  /** Schema for POST (create). */
-  createSchema: z.ZodType<TIn>;
-  /** Schema for PUT (update — usually all fields optional). */
-  updateSchema: z.ZodType<Partial<TIn>>;
-  /** Map validated input to a row insert/update payload (e.g. hash password). */
-  toRow?: (input: Partial<TIn>) => Promise<Record<string, unknown>> | Record<string, unknown>;
-  /** Strip secrets from outgoing rows. */
-  toClient?: (row: Record<string, unknown>) => TOut;
-}
-
-function makeEntity<TIn extends Record<string, unknown>, TOut extends Record<string, unknown>>(
-  cfg: EntityConfig<TIn, TOut>,
-): EntityConfig<TIn, TOut> {
-  return cfg;
-}
+// Tables in this app are guaranteed to expose an `id: serial primary key`.
+type WithId<T extends PgTable> = T & { id: PgColumn };
 
 // ---------- Reusable Zod helpers ----------
 const optionalString = z.string().trim().min(1).optional().nullable();
@@ -146,16 +125,16 @@ const adminUserCreate = z.object({
   email: z.string().trim().toLowerCase().email(),
   name: z.string().trim().min(1).max(255),
   role: z.string().trim().max(32).optional(),
-  password: passwordPolicy, // REQUIRED on create
+  password: passwordPolicy,
 });
 const adminUserUpdate = z.object({
   email: z.string().trim().toLowerCase().email().optional(),
   name: z.string().trim().min(1).max(255).optional(),
   role: z.string().trim().max(32).optional(),
-  password: passwordPolicy.optional(), // OPTIONAL on update
+  password: passwordPolicy.optional(),
 });
 
-async function adminUserToRow(input: Partial<z.infer<typeof adminUserCreate>>): Promise<Record<string, unknown>> {
+async function adminUserToRow(input: Partial<z.infer<typeof adminUserCreate>>) {
   const row: Record<string, unknown> = {};
   if (input.email !== undefined) row.email = input.email;
   if (input.name !== undefined) row.name = input.name;
@@ -165,181 +144,210 @@ async function adminUserToRow(input: Partial<z.infer<typeof adminUserCreate>>): 
 }
 
 function stripPasswordHash(row: Record<string, unknown>): Record<string, unknown> {
-  const { passwordHash: _ph, ...rest } = row as { passwordHash?: unknown } & Record<string, unknown>;
+  const { passwordHash: _ph, ...rest } = row as Record<string, unknown> & { passwordHash?: unknown };
   return rest;
 }
 
-// Helper: drizzle's table types don't expose a generic index signature, so we
-// narrow them through `unknown` once. The runtime shape always has `id`.
-const t = (table: PgTable): TableWithId => table as unknown as TableWithId;
+// ---------- Existential entity registration ----------
+//
+// Each entity captures its concrete table type T inside a closure that produces
+// fully-typed handlers. The outer registry stores only the closure, not the
+// generic type, so we never need broad `any`/`unknown` casts at the call sites.
+//
+// Drizzle's `db.insert(table).values(data)` requires `data` to satisfy the
+// table's inferred insert shape. Each per-entity Zod schema is the contract for
+// what the API accepts; the small `applyRow` helper inside `defineEntity` is
+// the *single, documented* place where validated input is bridged into
+// Drizzle's typed insert API.
+
+interface Handlers {
+  list: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  getOne: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  create?: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  update: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  remove: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+}
+
+interface EntityOptions<T extends PgTable, In, Out extends Record<string, unknown>> {
+  table: WithId<T>;
+  createSchema: z.ZodType<In>;
+  updateSchema: z.ZodType<Partial<In>>;
+  orderBy?: (table: WithId<T>) => SQL;
+  /** Convert validated Zod input into the row shape Drizzle expects. */
+  toRow?: (input: Partial<In>) => Promise<Record<string, unknown>> | Record<string, unknown>;
+  /** Strip secrets / shape outgoing rows. */
+  toClient?: (row: Record<string, unknown>) => Out;
+  /** When false, no POST handler is registered (e.g. prijaveni-problemi). */
+  allowCreate?: boolean;
+}
+
+function asValidationError(res: Response, err: z.ZodError) {
+  res.status(400).json({ error: 'Невалидни податоци', details: err.flatten() });
+}
+
+function defineEntity<T extends PgTable, In, Out extends Record<string, unknown>>(
+  opts: EntityOptions<T, In, Out>,
+): Handlers {
+  const { table, createSchema, updateSchema, orderBy, toRow, toClient, allowCreate = true } = opts;
+
+  const transform = (row: Record<string, unknown>): Record<string, unknown> =>
+    toClient ? toClient(row) : row;
+
+  const order = orderBy ? orderBy(table) : asc(table.id);
+
+  // The single, documented bridge between Zod-validated input and Drizzle's
+  // generic table insert/update. We narrow `T` enough that this stays inside
+  // this helper and never leaks to handler call sites.
+  type InsertShape = T['$inferInsert'];
+  const applyInsert = async (data: Record<string, unknown>) => {
+    const [row] = await db
+      .insert(table)
+      .values(data as InsertShape)
+      .returning();
+    return row as Record<string, unknown>;
+  };
+  const applyUpdate = async (id: number, data: Record<string, unknown>) => {
+    const [row] = await db
+      .update(table)
+      .set(data as Partial<InsertShape>)
+      .where(eq(table.id, id))
+      .returning();
+    return row as Record<string, unknown> | undefined;
+  };
+
+  const list = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const rows = await db.select().from(table).orderBy(order);
+      res.json((rows as Record<string, unknown>[]).map(transform));
+    } catch (e) { next(e); }
+  };
+
+  const getOne = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) { res.status(400).json({ error: 'Невалиден ID' }); return; }
+      const [row] = await db.select().from(table).where(eq(table.id, id));
+      if (!row) { res.status(404).json({ error: 'Не е најдено' }); return; }
+      res.json(transform(row as Record<string, unknown>));
+    } catch (e) { next(e); }
+  };
+
+  const create = allowCreate
+    ? async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          const parsed = createSchema.safeParse(req.body);
+          if (!parsed.success) { asValidationError(res, parsed.error); return; }
+          const data = toRow ? await toRow(parsed.data) : (parsed.data as Record<string, unknown>);
+          const row = await applyInsert(data);
+          res.status(201).json(transform(row));
+        } catch (e) { next(e); }
+      }
+    : undefined;
+
+  const update = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) { res.status(400).json({ error: 'Невалиден ID' }); return; }
+      const parsed = updateSchema.safeParse(req.body);
+      if (!parsed.success) { asValidationError(res, parsed.error); return; }
+      const data = toRow ? await toRow(parsed.data) : (parsed.data as Record<string, unknown>);
+      if (Object.keys(data).length === 0) {
+        res.status(400).json({ error: 'Нема податоци за ажурирање' });
+        return;
+      }
+      const row = await applyUpdate(id, data);
+      if (!row) { res.status(404).json({ error: 'Не е најдено' }); return; }
+      res.json(transform(row));
+    } catch (e) { next(e); }
+  };
+
+  const remove = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) { res.status(400).json({ error: 'Невалиден ID' }); return; }
+      const [row] = await db.delete(table).where(eq(table.id, id)).returning();
+      if (!row) { res.status(404).json({ error: 'Не е најдено' }); return; }
+      res.json({ ok: true });
+    } catch (e) { next(e); }
+  };
+
+  return create ? { list, getOne, create, update, remove } : { list, getOne, update, remove };
+}
 
 // ---------- Entity registry ----------
-const entities = {
-  'type-objava': makeEntity({ table: t(typeObjava), createSchema: lookupCreate, updateSchema: lookupUpdate }),
-  'type-legislativa': makeEntity({ table: t(typeLegislativa), createSchema: lookupCreate, updateSchema: lookupUpdate }),
-  'type-of-problems': makeEntity({ table: t(typeOfProblems), createSchema: lookupCreate, updateSchema: lookupUpdate }),
-  'naseleni-mesta': makeEntity({ table: t(naseleniMesta), createSchema: lookupCreate, updateSchema: lookupUpdate }),
+const entities: Record<string, Handlers> = {
+  'type-objava': defineEntity({ table: typeObjava, createSchema: lookupCreate, updateSchema: lookupUpdate }),
+  'type-legislativa': defineEntity({ table: typeLegislativa, createSchema: lookupCreate, updateSchema: lookupUpdate }),
+  'type-of-problems': defineEntity({ table: typeOfProblems, createSchema: lookupCreate, updateSchema: lookupUpdate }),
+  'naseleni-mesta': defineEntity({ table: naseleniMesta, createSchema: lookupCreate, updateSchema: lookupUpdate }),
 
-  'odnosi-so-javnost': makeEntity({
-    table: t(odnosiSoJavnost),
-    orderBy: { col: 'createdAt', dir: 'desc' },
+  'odnosi-so-javnost': defineEntity({
+    table: odnosiSoJavnost,
+    orderBy: (t) => desc(t.createdAt),
     createSchema: objavaCreate,
     updateSchema: objavaUpdate,
   }),
-  'sluzben-glasnik': makeEntity({
-    table: t(sluzbenGlasnik),
-    orderBy: { col: 'date', dir: 'desc' },
+  'sluzben-glasnik': defineEntity({
+    table: sluzbenGlasnik,
+    orderBy: (t) => desc(t.date),
     createSchema: glasnikCreate,
     updateSchema: glasnikUpdate,
   }),
-  'vraboteni': makeEntity({ table: t(vraboteni), createSchema: vrabotenCreate, updateSchema: vrabotenUpdate }),
-  'prijaveni-problemi': makeEntity({
-    table: t(prijaveniProblemi),
-    orderBy: { col: 'date', dir: 'desc' },
-    // No public-facing create here (problems come in via /api/problems).
-    // Admin create is disabled at the router level for this entity.
-    createSchema: problemUpdate as unknown as z.ZodType<Record<string, unknown>>,
+  'vraboteni': defineEntity({ table: vraboteni, createSchema: vrabotenCreate, updateSchema: vrabotenUpdate }),
+  'prijaveni-problemi': defineEntity({
+    table: prijaveniProblemi,
+    orderBy: (t) => desc(t.date),
+    // Problems are only created via the public POST /api/problems endpoint.
+    createSchema: problemUpdate as ZodTypeAny as z.ZodType<Record<string, unknown>>,
     updateSchema: problemUpdate,
+    allowCreate: false,
   }),
-  'budzet': makeEntity({
-    table: t(budzet),
-    orderBy: { col: 'forYear', dir: 'desc' },
+  'budzet': defineEntity({
+    table: budzet,
+    orderBy: (t) => desc(t.forYear),
     createSchema: budzetCreate,
     updateSchema: budzetUpdate,
   }),
-  'legislativa': makeEntity({ table: t(legislativa), createSchema: legislativaCreate, updateSchema: legislativaUpdate }),
-  'proekti': makeEntity({ table: t(proekti), createSchema: proektCreate, updateSchema: proektUpdate }),
-  'agenda': makeEntity({
-    table: t(agenda),
-    orderBy: { col: 'dateTime', dir: 'asc' },
+  'legislativa': defineEntity({ table: legislativa, createSchema: legislativaCreate, updateSchema: legislativaUpdate }),
+  'proekti': defineEntity({ table: proekti, createSchema: proektCreate, updateSchema: proektUpdate }),
+  'agenda': defineEntity({
+    table: agenda,
+    orderBy: (t) => asc(t.dateTime),
     createSchema: agendaCreate,
     updateSchema: agendaUpdate,
   }),
-  'institucii': makeEntity({ table: t(institucii), createSchema: institucijaCreate, updateSchema: institucijaUpdate }),
-  'admin-users': makeEntity({
-    table: t(adminUsers),
+  'institucii': defineEntity({ table: institucii, createSchema: institucijaCreate, updateSchema: institucijaUpdate }),
+  'admin-users': defineEntity({
+    table: adminUsers,
     createSchema: adminUserCreate,
     updateSchema: adminUserUpdate,
     toRow: adminUserToRow,
     toClient: stripPasswordHash,
   }),
-} as const;
+};
 
-type EntityKey = keyof typeof entities;
-
-// Entities with a public read endpoint (everything except admin-users and prijaveni-problemi).
-const PUBLIC_READ: EntityKey[] = [
+// Entities exposed on the public read API.
+const PUBLIC_READ = [
   'type-objava', 'type-legislativa', 'type-of-problems', 'naseleni-mesta',
   'odnosi-so-javnost', 'sluzben-glasnik', 'vraboteni', 'budzet',
   'legislativa', 'proekti', 'agenda', 'institucii',
 ];
 
-// Entities where the admin cannot create new rows (problems are created publicly only).
-const NO_ADMIN_CREATE: EntityKey[] = ['prijaveni-problemi'];
-
-function transform(cfg: EntityConfig<any, any>, row: Record<string, unknown>): Record<string, unknown> {
-  return cfg.toClient ? cfg.toClient(row) : row;
-}
-
-function orderClause(cfg: EntityConfig<any, any>) {
-  const c = cfg.orderBy ? col(cfg.table, cfg.orderBy.col) : cfg.table.id;
-  return cfg.orderBy?.dir === 'desc' ? desc(c) : asc(c);
-}
-
-function mountReadOnlyPublic(router: Router) {
-  for (const key of PUBLIC_READ) {
-    const cfg = entities[key];
-    router.get(`/${key}`, async (_req, res, next) => {
-      try {
-        const rows = await db.select().from(cfg.table).orderBy(orderClause(cfg));
-        res.json(rows.map((r) => transform(cfg, r as Record<string, unknown>)));
-      } catch (e) { next(e); }
-    });
-    router.get(`/${key}/:id`, async (req, res, next) => {
-      try {
-        const id = Number(req.params.id);
-        if (!Number.isFinite(id)) return res.status(400).json({ error: 'Невалиден ID' });
-        const [row] = await db.select().from(cfg.table).where(eq(cfg.table.id, id));
-        if (!row) return res.status(404).json({ error: 'Не е најдено' });
-        res.json(transform(cfg, row as Record<string, unknown>));
-      } catch (e) { next(e); }
-    });
-  }
-}
-
-function asValidationError(res: any, err: z.ZodError) {
-  return res.status(400).json({
-    error: 'Невалидни податоци',
-    details: err.flatten(),
-  });
-}
-
-function mountAdminCrud(router: Router) {
-  router.use(requireAdmin);
-  for (const key of Object.keys(entities) as EntityKey[]) {
-    const cfg = entities[key];
-
-    router.get(`/${key}`, async (_req, res, next) => {
-      try {
-        const rows = await db.select().from(cfg.table).orderBy(orderClause(cfg));
-        res.json(rows.map((r) => transform(cfg, r as Record<string, unknown>)));
-      } catch (e) { next(e); }
-    });
-
-    router.get(`/${key}/:id`, async (req, res, next) => {
-      try {
-        const id = Number(req.params.id);
-        if (!Number.isFinite(id)) return res.status(400).json({ error: 'Невалиден ID' });
-        const [row] = await db.select().from(cfg.table).where(eq(cfg.table.id, id));
-        if (!row) return res.status(404).json({ error: 'Не е најдено' });
-        res.json(transform(cfg, row as Record<string, unknown>));
-      } catch (e) { next(e); }
-    });
-
-    if (!NO_ADMIN_CREATE.includes(key)) {
-      router.post(`/${key}`, async (req, res, next) => {
-        try {
-          const parsed = (cfg.createSchema as ZodTypeAny).safeParse(req.body);
-          if (!parsed.success) return asValidationError(res, parsed.error);
-          const data = cfg.toRow ? await cfg.toRow(parsed.data) : (parsed.data as Record<string, unknown>);
-          const [row] = await db.insert(cfg.table).values(data as any).returning();
-          res.status(201).json(transform(cfg, row as Record<string, unknown>));
-        } catch (e) { next(e); }
-      });
-    }
-
-    router.put(`/${key}/:id`, async (req, res, next) => {
-      try {
-        const id = Number(req.params.id);
-        if (!Number.isFinite(id)) return res.status(400).json({ error: 'Невалиден ID' });
-        const parsed = (cfg.updateSchema as ZodTypeAny).safeParse(req.body);
-        if (!parsed.success) return asValidationError(res, parsed.error);
-        const data = cfg.toRow ? await cfg.toRow(parsed.data) : (parsed.data as Record<string, unknown>);
-        if (Object.keys(data).length === 0) {
-          return res.status(400).json({ error: 'Нема податоци за ажурирање' });
-        }
-        const [row] = await db.update(cfg.table).set(data as any).where(eq(cfg.table.id, id)).returning();
-        if (!row) return res.status(404).json({ error: 'Не е најдено' });
-        res.json(transform(cfg, row as Record<string, unknown>));
-      } catch (e) { next(e); }
-    });
-
-    router.delete(`/${key}/:id`, async (req, res, next) => {
-      try {
-        const id = Number(req.params.id);
-        if (!Number.isFinite(id)) return res.status(400).json({ error: 'Невалиден ID' });
-        const [row] = await db.delete(cfg.table).where(eq(cfg.table.id, id)).returning();
-        if (!row) return res.status(404).json({ error: 'Не е најдено' });
-        res.json({ ok: true });
-      } catch (e) { next(e); }
-    });
-  }
-}
-
 export const publicRouter: Router = Router();
-mountReadOnlyPublic(publicRouter);
+for (const key of PUBLIC_READ) {
+  const h = entities[key];
+  publicRouter.get(`/${key}`, h.list);
+  publicRouter.get(`/${key}/:id`, h.getOne);
+}
 
 export const adminRouter: Router = Router();
-mountAdminCrud(adminRouter);
+adminRouter.use(requireAdmin);
+for (const [key, h] of Object.entries(entities)) {
+  adminRouter.get(`/${key}`, h.list);
+  adminRouter.get(`/${key}/:id`, h.getOne);
+  if (h.create) adminRouter.post(`/${key}`, h.create);
+  adminRouter.put(`/${key}/:id`, h.update);
+  adminRouter.delete(`/${key}/:id`, h.remove);
+}
 
 export const entityNames = Object.keys(entities);

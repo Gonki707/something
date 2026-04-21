@@ -7,28 +7,28 @@ export interface AdminUser {
   role: string;
 }
 
-export async function login(email: string, password: string) {
-  const r = await api<{ token: string; user: AdminUser }>('/api/auth/login', {
+export async function login(email: string, password: string): Promise<AdminUser> {
+  const r = await api<{ user: AdminUser }>('/api/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
   });
-  localStorage.setItem('admin_token', r.token);
-  localStorage.setItem('admin_user', JSON.stringify(r.user));
-  return r;
+  return r.user;
 }
 
-export async function logout() {
-  await api('/api/auth/logout', { method: 'POST' }).catch(() => {});
-  localStorage.removeItem('admin_token');
-  localStorage.removeItem('admin_user');
+export async function logout(): Promise<void> {
+  try {
+    await api('/api/auth/logout', { method: 'POST' });
+  } catch {
+    /* ignore */
+  }
 }
 
-export function getCurrentUser(): AdminUser | null {
-  const raw = localStorage.getItem('admin_user');
-  if (!raw) return null;
-  try { return JSON.parse(raw); } catch { return null; }
-}
-
-export function isLoggedIn(): boolean {
-  return !!localStorage.getItem('admin_token');
+/** Bootstrap session from the httpOnly auth cookie. Returns null if not logged in. */
+export async function fetchCurrentUser(): Promise<AdminUser | null> {
+  try {
+    const r = await api<{ user: AdminUser }>('/api/auth/me');
+    return r.user;
+  } catch {
+    return null;
+  }
 }

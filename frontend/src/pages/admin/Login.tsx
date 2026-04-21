@@ -1,25 +1,29 @@
 import { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
-import { login, isLoggedIn } from '../../api/auth';
+import { login } from '../../api/auth';
+import { useAuth } from '../../context/AuthContext';
 
 export default function AdminLogin() {
+  const { user, loading, setUser } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const nav = useNavigate();
 
-  if (isLoggedIn()) return <Navigate to="/admin" replace />;
+  if (loading) return <div style={{ padding: '2rem' }}><span className="spinner" /></div>;
+  if (user) return <Navigate to="/admin" replace />;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true); setError(null);
+    setSubmitting(true); setError(null);
     try {
-      await login(email, password);
+      const u = await login(email, password);
+      setUser(u);
       nav('/admin');
-    } catch (e: any) {
-      setError(e.message || 'Грешка при најава');
-    } finally { setLoading(false); }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Грешка при најава');
+    } finally { setSubmitting(false); }
   };
 
   return (
@@ -39,8 +43,8 @@ export default function AdminLogin() {
             <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
           <div className="field"><label>Лозинка</label>
             <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
-          <button type="submit" className="btn primary" disabled={loading}>
-            {loading ? 'Најавување…' : 'Најави се'}
+          <button type="submit" className="btn primary" disabled={submitting}>
+            {submitting ? 'Најавување…' : 'Најави се'}
           </button>
         </form>
         <p style={{ marginTop: '1rem', color: 'var(--muted)', fontSize: '.85rem' }}>

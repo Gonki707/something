@@ -2,7 +2,19 @@ import { Link, useParams } from 'react-router-dom';
 import { useFetch } from '../hooks/useFetch';
 import { publicGet } from '../api/entities';
 
-interface Common { id: number; title?: string; createdAt?: string; description?: string | null; picture?: string | null; }
+function DocList({ docs }: { docs?: string[] | null }) {
+  if (!docs || !docs.length) return null;
+  return (
+    <div style={{ marginTop: '1.5rem' }}>
+      <h3>Документи</h3>
+      <div className="doc-list">
+        {docs.map((d, i) => (
+          <a key={i} href={d} target="_blank" rel="noreferrer">📄 {d.split('/').pop()}</a>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function ObjaviList() {
   const { type } = useParams();
@@ -84,7 +96,7 @@ export function SluzbenGlasnikPage() {
               <tbody>
                 {(data || []).map((g) => (
                   <tr key={g.id}>
-                    <td>{g.broj}</td>
+                    <td><Link to={`/sluzben-glasnik/${g.id}`}>{g.broj}</Link></td>
                     <td>{g.date ? new Date(g.date).toLocaleDateString('mk-MK') : '-'}</td>
                     <td>{g.document ? <a href={g.document} target="_blank" rel="noreferrer">📄 Преземи</a> : '-'}</td>
                   </tr>
@@ -108,17 +120,42 @@ export function VraboteniPage() {
         {loading ? <span className="spinner" /> : (
           <div className="cards">
             {(data || []).map((v) => (
-              <div key={v.id} className="card">
+              <Link key={v.id} to={`/vraboteni/${v.id}`} className="card" style={{ color: 'inherit' }}>
                 <div className="card-body">
                   <span className="tag">{v.oddel || 'Општина'}</span>
                   <h3>{v.firstName} {v.lastName}</h3>
                   <p>{v.function}</p>
-                  {v.email && <a href={`mailto:${v.email}`}>{v.email}</a>}
+                  {v.email && <span>{v.email}</span>}
                 </div>
-              </div>
+              </Link>
             ))}
+            {!data?.length && <div className="empty">Нема внесени вработени.</div>}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+export function VrabotenDetail() {
+  const { id } = useParams();
+  const { data } = useFetch<any[]>(() => publicGet('vraboteni'), [id]);
+  const v = (data || []).find((x) => x.id === Number(id));
+  return (
+    <div className="page">
+      <div className="container">
+        {v ? (
+          <>
+            <div className="page-header">
+              <div className="crumb">Локална самоуправа · Вработени</div>
+              <h1>{v.firstName} {v.lastName}</h1>
+              <div style={{ color: 'var(--muted)' }}>{v.function} · {v.oddel}</div>
+            </div>
+            <div className="card" style={{ padding: '1.5rem' }}>
+              {v.email && <p>📧 <a href={`mailto:${v.email}`}>{v.email}</a></p>}
+            </div>
+          </>
+        ) : <span className="spinner" />}
       </div>
     </div>
   );
@@ -133,20 +170,40 @@ export function BudzetPage() {
         {loading ? <span className="spinner" /> : (
           <div className="cards">
             {(data || []).map((b) => (
-              <div key={b.id} className="card">
+              <Link key={b.id} to={`/budzet/${b.id}`} className="card" style={{ color: 'inherit' }}>
                 <div className="card-body">
                   <span className="tag">Година {b.forYear}</span>
                   <h3>Буџет за {b.forYear}</h3>
                   <p>{b.date ? new Date(b.date).toLocaleDateString('mk-MK') : ''}</p>
-                  {b.documents?.map((d: string, i: number) => (
-                    <a key={i} href={d} target="_blank" rel="noreferrer">📄 Документ {i + 1}</a>
-                  ))}
+                  <small>{(b.documents?.length || 0)} документ(и)</small>
                 </div>
-              </div>
+              </Link>
             ))}
             {!data?.length && <div className="empty">Сè уште нема внесени буџети.</div>}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+export function BudzetDetail() {
+  const { id } = useParams();
+  const { data } = useFetch<any[]>(() => publicGet('budzet'), [id]);
+  const b = (data || []).find((x) => x.id === Number(id));
+  return (
+    <div className="page">
+      <div className="container">
+        {b ? (
+          <>
+            <div className="page-header">
+              <div className="crumb">Финансии · Буџет</div>
+              <h1>Буџет за {b.forYear}</h1>
+              <div style={{ color: 'var(--muted)' }}>Објавено: {b.date ? new Date(b.date).toLocaleDateString('mk-MK') : '—'}</div>
+            </div>
+            <DocList docs={b.documents} />
+          </>
+        ) : <span className="spinner" />}
       </div>
     </div>
   );
@@ -161,17 +218,37 @@ export function ProektiPage() {
         {loading ? <span className="spinner" /> : (
           <div className="cards">
             {(data || []).map((p) => (
-              <div key={p.id} className="card">
+              <Link key={p.id} to={`/proekti/${p.id}`} className="card" style={{ color: 'inherit' }}>
                 <div style={{ height: 180, background: p.picture ? `url(${p.picture}) center/cover` : 'linear-gradient(135deg,#c8a24a,#0c3b5c)' }} />
                 <div className="card-body">
                   <h3>{p.title}</h3>
-                  <p>{p.description}</p>
+                  <p>{(p.description || '').slice(0, 140)}</p>
                 </div>
-              </div>
+              </Link>
             ))}
             {!data?.length && <div className="empty">Нема внесени проекти.</div>}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+export function ProektDetail() {
+  const { id } = useParams();
+  const { data } = useFetch<any[]>(() => publicGet('proekti'), [id]);
+  const p = (data || []).find((x) => x.id === Number(id));
+  return (
+    <div className="page">
+      <div className="container">
+        {p ? (
+          <>
+            <div className="page-header"><div className="crumb">Општина · Проекти</div><h1>{p.title}</h1></div>
+            {p.picture && <img src={p.picture} alt={p.title} style={{ borderRadius: 'var(--radius)', maxHeight: 420, objectFit: 'cover', width: '100%' }} />}
+            <div style={{ marginTop: '1.5rem', whiteSpace: 'pre-wrap' }}>{p.description}</div>
+            <DocList docs={p.documents} />
+          </>
+        ) : <span className="spinner" />}
       </div>
     </div>
   );
@@ -195,7 +272,7 @@ export function LegislativaPage() {
                 {filtered.map((l) => (
                   <tr key={l.id}>
                     <td>{typeMap[l.typeId]}</td>
-                    <td>{l.title || '-'}</td>
+                    <td><Link to={`/legislativa-detalji/${l.id}`}>{l.title || 'Документ'}</Link></td>
                     <td>{l.document ? <a href={l.document} target="_blank" rel="noreferrer">📄 Преземи</a> : '-'}</td>
                   </tr>
                 ))}
@@ -247,6 +324,46 @@ export function NaseleniMestaPage() {
             <div key={n.id} className="card"><div className="card-body"><h3>{n.title}</h3></div></div>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+export function GlasnikDetail() {
+  const { id } = useParams();
+  const { data } = useFetch<any[]>(() => publicGet('sluzben-glasnik'), [id]);
+  const g = (data || []).find((x) => x.id === Number(id));
+  return (
+    <div className="page">
+      <div className="container">
+        {g ? (
+          <>
+            <div className="page-header"><div className="crumb">Односи со јавност · Службен гласник</div><h1>Број {g.broj}</h1>
+              <div style={{ color: 'var(--muted)' }}>{g.date ? new Date(g.date).toLocaleDateString('mk-MK') : ''}</div>
+            </div>
+            {g.document && <p><a href={g.document} target="_blank" rel="noreferrer" className="btn primary">📄 Преземи документ</a></p>}
+          </>
+        ) : <span className="spinner" />}
+      </div>
+    </div>
+  );
+}
+
+export function LegislativaDetail() {
+  const { id } = useParams();
+  const { data } = useFetch<any[]>(() => publicGet('legislativa'), [id]);
+  const { data: types } = useFetch<any[]>(() => publicGet('type-legislativa'));
+  const l = (data || []).find((x) => x.id === Number(id));
+  const typeName = types?.find((t) => t.id === l?.typeId)?.title;
+  return (
+    <div className="page">
+      <div className="container">
+        {l ? (
+          <>
+            <div className="page-header"><div className="crumb">Легислатива · {typeName || ''}</div><h1>{l.title || 'Документ'}</h1></div>
+            {l.document && <p><a href={l.document} target="_blank" rel="noreferrer" className="btn primary">📄 Преземи документ</a></p>}
+          </>
+        ) : <span className="spinner" />}
       </div>
     </div>
   );

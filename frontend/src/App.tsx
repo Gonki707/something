@@ -4,8 +4,10 @@ import AdminLayout from './layouts/AdminLayout';
 import Home from './pages/Home';
 import ReportProblem from './pages/ReportProblem';
 import {
-  ObjaviList, ObjavaDetail, SluzbenGlasnikPage, VraboteniPage,
-  BudzetPage, ProektiPage, LegislativaPage, InstitucionDetail,
+  ObjaviList, ObjavaDetail, SluzbenGlasnikPage, GlasnikDetail,
+  VraboteniPage, VrabotenDetail,
+  BudzetPage, BudzetDetail, ProektiPage, ProektDetail,
+  LegislativaPage, LegislativaDetail, InstitucionDetail,
   NaseleniMestaPage, StaticPage,
 } from './pages/ListPage';
 import AdminLogin from './pages/admin/Login';
@@ -21,10 +23,15 @@ export default function App() {
         <Route path="objavi/:type" element={<ObjaviList />} />
         <Route path="objavi-detalji/:id" element={<ObjavaDetail />} />
         <Route path="sluzben-glasnik" element={<SluzbenGlasnikPage />} />
+        <Route path="sluzben-glasnik/:id" element={<GlasnikDetail />} />
         <Route path="vraboteni" element={<VraboteniPage />} />
+        <Route path="vraboteni/:id" element={<VrabotenDetail />} />
         <Route path="budzet" element={<BudzetPage />} />
+        <Route path="budzet/:id" element={<BudzetDetail />} />
         <Route path="proekti" element={<ProektiPage />} />
+        <Route path="proekti/:id" element={<ProektDetail />} />
         <Route path="legislativa/:type" element={<LegislativaPage />} />
+        <Route path="legislativa-detalji/:id" element={<LegislativaDetail />} />
         <Route path="institucii/:id" element={<InstitucionDetail />} />
         <Route path="naseleni-mesta" element={<NaseleniMestaPage />} />
         <Route path="prijavi-problem" element={<ReportProblem />} />

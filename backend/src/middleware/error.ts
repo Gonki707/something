@@ -1,10 +1,22 @@
 import type { Request, Response, NextFunction } from 'express';
 
-export function errorHandler(err: any, _req: Request, res: Response, _next: NextFunction) {
-  console.error('[error]', err);
-  const status = err.status || err.statusCode || 500;
+interface HttpError extends Error {
+  status?: number;
+  statusCode?: number;
+  details?: unknown;
+}
+
+function toHttpError(err: unknown): HttpError {
+  if (err instanceof Error) return err as HttpError;
+  return Object.assign(new Error(String(err)), { status: 500 });
+}
+
+export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction): void {
+  const e = toHttpError(err);
+  console.error('[error]', e);
+  const status = e.status ?? e.statusCode ?? 500;
   res.status(status).json({
-    error: err.message || 'Internal server error',
-    details: err.details,
+    error: e.message || 'Internal server error',
+    details: e.details,
   });
 }
