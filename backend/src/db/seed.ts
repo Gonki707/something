@@ -30,8 +30,13 @@ async function seed() {
     console.log(`  + admin user: ${env.DEFAULT_ADMIN_EMAIL} / ${env.DEFAULT_ADMIN_PASSWORD}`);
   }
 
-  // Lookups
-  const seedLookup = async (table: any, items: string[], label: string) => {
+  type LookupTbl =
+    | typeof typeObjava
+    | typeof typeLegislativa
+    | typeof typeOfProblems
+    | typeof naseleniMesta;
+
+  const seedLookup = async (table: LookupTbl, items: string[], label: string) => {
     const exists = await db.select().from(table).limit(1);
     if (exists.length === 0) {
       await db.insert(table).values(items.map((title) => ({ title })));

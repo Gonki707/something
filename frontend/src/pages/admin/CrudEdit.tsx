@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ADMIN_ENTITIES, Field } from './entitiesConfig';
+import { ADMIN_ENTITIES, type Field } from './entitiesConfig';
 import { adminGet, adminCreate, adminUpdate, publicGet } from '../../api/entities';
 import { uploadFiles } from '../../api/client';
+
+type FormValue = string | number | string[] | null | undefined;
+type FormState = Record<string, FormValue>;
+type LookupItem = { id: number; title: string };
 
 export default function CrudEdit() {
   const { entity, id } = useParams<{ entity: string; id: string }>();
@@ -10,23 +14,27 @@ export default function CrudEdit() {
   const isNew = id === 'new';
   const nav = useNavigate();
 
-  const [form, setForm] = useState<Record<string, any>>({});
-  const [lookups, setLookups] = useState<Record<string, { id: number; title: string }[]>>({});
+  const [form, setForm] = useState<FormState>({});
+  const [lookups, setLookups] = useState<Record<string, LookupItem[]>>({});
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!cfg || !entity) return;
-    const lookupKeys = cfg.fields.filter((f) => f.type === 'select' && f.lookup).map((f) => f.lookup!);
-    Promise.all(lookupKeys.map((k) => publicGet<any>(k).then((items) => [k, items] as const)))
-      .then((entries) => setLookups(Object.fromEntries(entries)));
+    const lookupKeys = cfg.fields
+      .filter((f) => f.type === 'select' && f.lookup)
+      .map((f) => f.lookup as string);
+    Promise.all(
+      lookupKeys.map((k) => publicGet<LookupItem>(k).then((items) => [k, items] as const)),
+    ).then((entries) => setLookups(Object.fromEntries(entries)));
 
     if (!isNew && id) {
-      adminGet(entity, id).then((data) => setForm(data || {})).finally(() => setLoading(false));
+      adminGet<Record<string, unknown>>(entity, id)
+        .then((data) => setForm((data as FormState) || {}))
+        .finally(() => setLoading(false));
     } else {
-      // initialize empty
-      const init: Record<string, any> = {};
+      const init: FormState = {};
       cfg.fields.forEach((f) => { init[f.key] = f.type === 'documents' ? [] : ''; });
       setForm(init);
     }
@@ -34,7 +42,7 @@ export default function CrudEdit() {
 
   if (!cfg || !entity) return <div>Непозната категорија.</div>;
 
-  const setField = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
+  const setField = (k: string, v: FormValue) => setForm((f) => ({ ...f, [k]: v }));
 
   const onUploadImage = async (k: string, file: File | null) => {
     if (!file) return;
@@ -44,51 +52,57 @@ export default function CrudEdit() {
   const onUploadDocs = async (k: string, files: FileList | null) => {
     if (!files || !files.length) return;
     const r = await uploadFiles(Array.from(files), true);
-    setField(k, [...(form[k] || []), ...r.map((f) => f.path)]);
+    const current = form[k];
+    const list = Array.isArray(current) ? current : [];
+    setField(k, [...list, ...r.map((f) => f.path)]);
   };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true); setError(null);
     try {
-      // coerce numeric fields
-      const payload: Record<string, any> = { ...form };
+      const payload: Record<string, unknown> = { ...form };
       cfg.fields.forEach((f) => {
-        if (f.type === 'number' && payload[f.key] !== '') payload[f.key] = Number(payload[f.key]);
-        if (f.type === 'select' && payload[f.key] !== '' && payload[f.key] != null) payload[f.key] = Number(payload[f.key]);
-        if (payload[f.key] === '') payload[f.key] = null;
+        const v = payload[f.key];
+        if (f.type === 'number' && v !== '' && v != null) payload[f.key] = Number(v);
+        else if (f.type === 'select' && v !== '' && v != null) payload[f.key] = Number(v);
+        else if (v === '') payload[f.key] = null;
       });
       if (isNew) await adminCreate(entity, payload);
       else await adminUpdate(entity, id!, payload);
       nav(`/admin/${entity}`);
-    } catch (e: any) {
-      setError(e.message || 'Грешка при зачувување');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Грешка при зачувување');
     } finally { setSaving(false); }
   };
 
   if (loading) return <span className="spinner" />;
 
   const renderField = (f: Field) => {
-    const val = form[f.key] ?? '';
+    const raw = form[f.key];
+    const valStr = raw == null ? '' : String(raw);
     switch (f.type) {
       case 'textarea':
-        return <textarea value={val ?? ''} onChange={(e) => setField(f.key, e.target.value)} />;
+        return <textarea value={valStr} onChange={(e) => setField(f.key, e.target.value)} />;
       case 'number':
-        return <input type="number" value={val ?? ''} required={f.required} onChange={(e) => setField(f.key, e.target.value)} />;
+        return <input type="number" value={valStr} required={f.required} onChange={(e) => setField(f.key, e.target.value)} />;
       case 'date':
-        return <input type="date" value={(val ?? '').toString().slice(0, 10)} onChange={(e) => setField(f.key, e.target.value)} />;
-      case 'datetime':
-        return <input type="datetime-local" value={val ? new Date(val).toISOString().slice(0, 16) : ''} onChange={(e) => setField(f.key, e.target.value)} />;
+        return <input type="date" value={valStr.slice(0, 10)} onChange={(e) => setField(f.key, e.target.value)} />;
+      case 'datetime': {
+        const dt = raw ? new Date(String(raw)) : null;
+        const v = dt && !Number.isNaN(dt.getTime()) ? dt.toISOString().slice(0, 16) : '';
+        return <input type="datetime-local" value={v} onChange={(e) => setField(f.key, e.target.value)} />;
+      }
       case 'email':
-        return <input type="email" value={val ?? ''} onChange={(e) => setField(f.key, e.target.value)} />;
+        return <input type="email" value={valStr} onChange={(e) => setField(f.key, e.target.value)} />;
       case 'url':
-        return <input type="url" value={val ?? ''} onChange={(e) => setField(f.key, e.target.value)} />;
+        return <input type="url" value={valStr} onChange={(e) => setField(f.key, e.target.value)} />;
       case 'password':
-        return <input type="password" value={val ?? ''} placeholder={isNew ? '' : 'Остави празно за непроменета'} onChange={(e) => setField(f.key, e.target.value)} />;
+        return <input type="password" value={valStr} placeholder={isNew ? '' : 'Остави празно за непроменета'} onChange={(e) => setField(f.key, e.target.value)} />;
       case 'select': {
-        const opts = lookups[f.lookup!] || [];
+        const opts = (f.lookup && lookups[f.lookup]) || [];
         return (
-          <select value={val ?? ''} required={f.required} onChange={(e) => setField(f.key, e.target.value)}>
+          <select value={valStr} required={f.required} onChange={(e) => setField(f.key, e.target.value)}>
             <option value="">— Избери —</option>
             {opts.map((o) => <option key={o.id} value={o.id}>{o.title}</option>)}
           </select>
@@ -97,26 +111,28 @@ export default function CrudEdit() {
       case 'image':
         return (
           <div>
-            <input type="file" accept="image/*,application/pdf" onChange={(e) => onUploadImage(f.key, e.target.files?.[0] || null)} />
-            {val && <div style={{ marginTop: 6 }}><a href={val} target="_blank" rel="noreferrer">📄 Тековна датотека</a> · <button type="button" className="btn sm" onClick={() => setField(f.key, null)}>Отстрани</button></div>}
+            <input type="file" accept="image/*" onChange={(e) => onUploadImage(f.key, e.target.files?.[0] || null)} />
+            {valStr && <div style={{ marginTop: 6 }}><a href={valStr} target="_blank" rel="noreferrer">📄 Тековна датотека</a> · <button type="button" className="btn sm" onClick={() => setField(f.key, null)}>Отстрани</button></div>}
           </div>
         );
-      case 'documents':
+      case 'documents': {
+        const docs = Array.isArray(raw) ? raw : [];
         return (
           <div>
             <input type="file" multiple onChange={(e) => onUploadDocs(f.key, e.target.files)} />
             <div className="doc-list" style={{ marginTop: 6 }}>
-              {(val || []).map((d: string, i: number) => (
+              {docs.map((d, i) => (
                 <div key={i}>
                   <a href={d} target="_blank" rel="noreferrer">📄 {d.split('/').pop()}</a>{' '}
-                  <button type="button" className="btn sm" onClick={() => setField(f.key, val.filter((_: any, idx: number) => idx !== i))}>×</button>
+                  <button type="button" className="btn sm" onClick={() => setField(f.key, docs.filter((_, idx) => idx !== i))}>×</button>
                 </div>
               ))}
             </div>
           </div>
         );
+      }
       default:
-        return <input type="text" value={val ?? ''} required={f.required} onChange={(e) => setField(f.key, e.target.value)} />;
+        return <input type="text" value={valStr} required={f.required} onChange={(e) => setField(f.key, e.target.value)} />;
     }
   };
 

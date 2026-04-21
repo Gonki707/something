@@ -4,8 +4,9 @@ import { publicGet, submitProblem } from '../api/entities';
 import { uploadFiles } from '../api/client';
 
 export default function ReportProblem() {
-  const { data: types } = useFetch<any[]>(() => publicGet('type-of-problems'));
-  const { data: mesta } = useFetch<any[]>(() => publicGet('naseleni-mesta'));
+  type LookupItem = { id: number; title: string };
+  const { data: types } = useFetch<LookupItem[]>(() => publicGet('type-of-problems'));
+  const { data: mesta } = useFetch<LookupItem[]>(() => publicGet('naseleni-mesta'));
   const [form, setForm] = useState({
     fullName: '', email: '', phoneNumber: '',
     typeOfProblemId: '', naselenoMestoId: '', description: '',
@@ -23,8 +24,8 @@ export default function ReportProblem() {
     try {
       const r = await uploadFiles([file], false);
       setPicture(r[0].path);
-    } catch (e: any) {
-      setError(e.message || 'Грешка при прикачување');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Грешка при прикачување');
     } finally { setUploading(false); }
   };
 
@@ -44,8 +45,8 @@ export default function ReportProblem() {
       setStatus('sent');
       setForm({ fullName: '', email: '', phoneNumber: '', typeOfProblemId: '', naselenoMestoId: '', description: '' });
       setPicture(null);
-    } catch (e: any) {
-      setError(e.message || 'Грешка');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Грешка');
       setStatus('error');
     }
   };

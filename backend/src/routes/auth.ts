@@ -20,6 +20,7 @@ router.post('/login', async (req, res, next) => {
     if (!user) return res.status(401).json({ error: 'Невалиден е-маил или лозинка' });
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) return res.status(401).json({ error: 'Невалиден е-маил или лозинка' });
+    if (user.role !== 'admin') return res.status(403).json({ error: 'Немате администраторски пристап' });
     const token = signToken({ id: user.id, email: user.email, role: user.role, name: user.name });
     res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 7 * 86400000 });
     res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });

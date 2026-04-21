@@ -70,11 +70,14 @@ router.post('/admin', requireAdmin, adminUploader.array('files', 20), (req, res)
 });
 
 // Surface multer/filter errors as clean 400s.
-router.use((err: any, _req: any, res: any, next: any) => {
-  if (err instanceof multer.MulterError || err?.message === 'Недозволен тип на датотека') {
-    return res.status(400).json({ error: err.message });
+import type { ErrorRequestHandler } from 'express';
+const uploadErrorHandler: ErrorRequestHandler = (err, _req, res, next) => {
+  const e = err instanceof Error ? err : new Error(String(err));
+  if (err instanceof multer.MulterError || e.message === 'Недозволен тип на датотека') {
+    return res.status(400).json({ error: e.message });
   }
   next(err);
-});
+};
+router.use(uploadErrorHandler);
 
 export default router;

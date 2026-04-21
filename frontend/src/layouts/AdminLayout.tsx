@@ -9,6 +9,16 @@ export default function AdminLayout() {
 
   if (loading) return <div style={{ padding: '2rem' }}><span className="spinner" /> Се вчитува…</div>;
   if (!user) return <Navigate to="/admin/login" replace />;
+  if (user.role !== 'admin') {
+    return (
+      <div style={{ padding: '2rem' }}>
+        <div className="alert error">Немате администраторски пристап.</div>
+        <button className="btn" onClick={async () => { await logout(); setUser(null); nav('/admin/login'); }}>
+          Одјави се
+        </button>
+      </div>
+    );
+  }
 
   const onLogout = async () => {
     await logout();

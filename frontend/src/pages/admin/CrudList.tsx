@@ -1,25 +1,38 @@
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { ADMIN_ENTITIES } from './entitiesConfig';
+import { ADMIN_ENTITIES, type Field } from './entitiesConfig';
 import { adminList, adminDelete, publicGet } from '../../api/entities';
+
+type Row = Record<string, unknown> & { id: number };
+type LookupItem = { id: number; title: string };
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null;
+}
 
 export default function CrudList() {
   const { entity } = useParams<{ entity: string }>();
   const cfg = entity ? ADMIN_ENTITIES[entity] : null;
   const nav = useNavigate();
-  const [rows, setRows] = useState<any[]>([]);
+  const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [lookups, setLookups] = useState<Record<string, Record<number, string>>>({});
 
   useEffect(() => {
     if (!entity || !cfg) return;
     setLoading(true);
-    adminList(entity).then(setRows).finally(() => setLoading(false));
+    adminList<Row>(entity).then(setRows).finally(() => setLoading(false));
 
-    const lookupKeys = cfg.fields.filter((f) => f.type === 'select' && f.lookup).map((f) => f.lookup!);
-    Promise.all(lookupKeys.map((k) =>
-      publicGet<any>(k).then((items) => [k, Object.fromEntries(items.map((it) => [it.id, it.title]))] as const)
-    )).then((entries) => setLookups(Object.fromEntries(entries)));
+    const lookupKeys = cfg.fields
+      .filter((f) => f.type === 'select' && f.lookup)
+      .map((f) => f.lookup as string);
+    Promise.all(
+      lookupKeys.map((k) =>
+        publicGet<LookupItem>(k).then(
+          (items) => [k, Object.fromEntries(items.map((it) => [it.id, it.title]))] as const,
+        ),
+      ),
+    ).then((entries) => setLookups(Object.fromEntries(entries)));
   }, [entity]);
 
   if (!cfg || !entity) return <div>Непозната категорија.</div>;
@@ -32,16 +45,26 @@ export default function CrudList() {
 
   const visibleFields = cfg.fields.filter((f) => f.showInList);
 
-  const formatCell = (row: any, f: any) => {
+  const formatCell = (row: Row, f: Field): React.ReactNode => {
     const v = row[f.key];
     if (v == null || v === '') return '-';
-    if (f.type === 'select' && f.lookup) return lookups[f.lookup]?.[v] ?? v;
-    if (f.type === 'date') return new Date(v).toLocaleDateString('mk-MK');
-    if (f.type === 'datetime') return new Date(v).toLocaleString('mk-MK');
-    if (f.type === 'image') return v ? <a href={v} target="_blank" rel="noreferrer">📄</a> : '-';
+    if (f.type === 'select' && f.lookup) {
+      const id = typeof v === 'number' ? v : Number(v);
+      return lookups[f.lookup]?.[id] ?? String(v);
+    }
+    if (f.type === 'date' || f.type === 'datetime') {
+      const d = new Date(String(v));
+      if (Number.isNaN(d.getTime())) return String(v);
+      return f.type === 'date' ? d.toLocaleDateString('mk-MK') : d.toLocaleString('mk-MK');
+    }
+    if (f.type === 'image') {
+      const s = String(v);
+      return <a href={s} target="_blank" rel="noreferrer">📄</a>;
+    }
     if (Array.isArray(v)) return `${v.length} датотеки`;
-    if (typeof v === 'string' && v.length > 80) return v.slice(0, 80) + '…';
-    return String(v);
+    if (isRecord(v)) return JSON.stringify(v);
+    const s = String(v);
+    return s.length > 80 ? s.slice(0, 80) + '…' : s;
   };
 
   return (
