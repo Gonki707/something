@@ -52,9 +52,16 @@ cp .env.example .env
 # ако сакаш и SMTP за е-маил пораки
 
 npm install
-npm run db:push      # креира ги сите табели
+npm run db:migrate   # применува SQL миграции од /backend/drizzle (препорачано)
 npm run db:seed      # внесува почетен админ + шифрарници + примери податоци
 npm run dev          # стартува на http://localhost:4000
+
+# Кога ќе ја смениш шемата (src/db/schema.ts):
+#   npm run db:generate   # создава нова SQL миграција во /drizzle
+#   npm run db:migrate    # ја применува
+#
+# Алтернатива за брз развој (без committed миграции):
+#   npm run db:push
 ```
 
 Стандардна најава за админ:

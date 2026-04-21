@@ -7,30 +7,74 @@ import { requireAdmin } from '../middleware/auth.js';
 const uploadDir = path.resolve(process.cwd(), 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadDir),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const base = path.basename(file.originalname, ext).replace(/[^\w.-]+/g, '_');
-    cb(null, `${Date.now()}_${base}${ext}`);
-  },
-});
-const upload = multer({ storage, limits: { fileSize: 25 * 1024 * 1024 } });
+// Strict allowlists. Public uploads are images only. Admin uploads also allow PDFs and Office docs.
+const PUBLIC_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+const PUBLIC_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
+
+const ADMIN_MIME = new Set([
+  ...PUBLIC_MIME,
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/plain',
+]);
+const ADMIN_EXT = new Set([
+  ...PUBLIC_EXT,
+  '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.txt',
+]);
+
+function buildUploader(allowedMime: Set<string>, allowedExt: Set<string>, maxBytes: number) {
+  const storage = multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, uploadDir),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      const base = path
+        .basename(file.originalname, ext)
+        .replace(/[^\w-]+/g, '_')
+        .slice(0, 80);
+      cb(null, `${Date.now()}_${base}${ext}`);
+    },
+  });
+  return multer({
+    storage,
+    limits: { fileSize: maxBytes, files: 20 },
+    fileFilter: (_req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      if (!allowedExt.has(ext) || !allowedMime.has(file.mimetype)) {
+        return cb(new Error('Недозволен тип на датотека'));
+      }
+      cb(null, true);
+    },
+  });
+}
+
+const publicUploader = buildUploader(PUBLIC_MIME, PUBLIC_EXT, 8 * 1024 * 1024); // 8 MB images
+const adminUploader = buildUploader(ADMIN_MIME, ADMIN_EXT, 25 * 1024 * 1024);   // 25 MB
 
 const router = Router();
 
-// Public upload (used by report-problem form for image attachments)
-router.post('/public', upload.single('file'), (req, res) => {
+// Public upload — IMAGES ONLY, used by the report-problem form.
+router.post('/public', publicUploader.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Нема прикачена датотека' });
   res.json({ path: `/uploads/${req.file.filename}`, originalName: req.file.originalname });
 });
 
-// Admin upload (single or multiple)
-router.post('/admin', requireAdmin, upload.array('files', 20), (req, res) => {
+// Admin upload (single or multiple), wider allowlist.
+router.post('/admin', requireAdmin, adminUploader.array('files', 20), (req, res) => {
   const files = (req.files as Express.Multer.File[]) || [];
   res.json({
     files: files.map((f) => ({ path: `/uploads/${f.filename}`, originalName: f.originalname })),
   });
+});
+
+// Surface multer/filter errors as clean 400s.
+router.use((err: any, _req: any, res: any, next: any) => {
+  if (err instanceof multer.MulterError || err?.message === 'Недозволен тип на датотека') {
+    return res.status(400).json({ error: err.message });
+  }
+  next(err);
 });
 
 export default router;
