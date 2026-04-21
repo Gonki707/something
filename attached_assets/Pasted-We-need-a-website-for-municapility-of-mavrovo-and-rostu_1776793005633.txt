@@ -1,0 +1,126 @@
+We need a website for municapility of mavrovo and rostuse search the web for some informations and picturesor the webstie it needs to be made with react with slick yet serious modern look. For the frontend it needs to feature a complex drowdown menu with sections:
+Main Menu: Zapoznaj ja opstinata
+Menu and language selector.
+Dropdown From Zapoznaj ja opstinata:
+Mestopolozba, Naseleni Mesta, Prirodni Bogastva.
+DropDown from Menu:
+Section : Lokalna samouprava
+PageLinkTitle1: gradonacalnik, PageLinkTitle2:vraboteni, PageLinkTitle3:sovetnaopstinata
+BreakLine(SubSection:Institucii)
+PageLlinks From Table Institucii
+BreakLine
+PageLink: organogram
+
+Section: Odnosi so javnost
+PageLinkTitle1:Novosti
+PageLinkTitle2:Soopstenija
+PageLinkTitle3:Oglasi
+PageLinkTitle4:Konkursi
+PageLinkTitle5:SluzbenGlasnik
+PageLinkTitle6:Pristap do informacii od javen karakter
+
+Section: Finansii
+PageLinkTitle1: Budzet na opstinata
+PageLinkTitle2: Finansiska Transparetnost
+PageLinkTitle3: Danoci
+PageLinkTitle4: Primer Uplatnici
+
+Section:Legislativa
+PageLinkTitle1: Obrasci
+PageLinkTitle2: Zakoni
+PageLinkTtile3: Statut I Kodeks
+
+Section: Proekti
+PageLinkTitle: Proekti
+
+Legislativa and Proekti put them one below another
+
+For the Frontend page give vibrient modern home page for this instutution
+
+For the Backend we need admin page with admin users and authentication and we need this tables:
+
+1.OdnosiSoJavnost table
+-TypeID
+-Title
+-Picture
+-Description
+-Documents(Paths Folders)
+-Date valid to
+-Made by
+
+2.SluzbenGlasnik table
+-Broj
+-Date
+-Document(PathFolder)
+
+3.Vraboteni table
+-FirstName
+-LastName
+-e-mail
+-Oddel
+-Function
+
+4.PrijaveniProblemi
+-FullName
+-TypeOfProblem
+-Description
+-Picture(optional)
+-NaselenoMestoID
+-Date
+-PhoneNumber
+-e-mail.
+
+5.Budzet
+-ID
+-Date
+-ForYear
+-Documents(Path)
+
+6.Legislativa
+-Type
+-Document(DocumentPathFolder)
+
+7.Proects
+-Title
+-Description
+-Picture
+-Docmuents(Optional)
+
+8.Agenda
+-DateTime
+-Tittle
+-Description
+
+9.Institutions
+-NameOfInstitution
+-MestoNaseleno
+-DirectorFullName
+-DirectorBiogrpahy
+-e-mail
+-WebSite
+-Facebook
+-Instagram
+
+9.TypeObjava
+-Id
+-Title
+
+10.TypeLegislativa
+-ID
+-Title
+
+11.TpeOfProblems
+-ID
+-Title
+
+12.NaseleniMesta
+-ID
+-Title
+
+The Types and NaseleniMesta are for choosing in other tables as dropdownLists.
+
+For the frontend the home page ass all other things it needs to have agenda section with calendar view where will be loaded events from agenda table
+
+And prijaviProblemPage needs to have a form that will insert into our prijaveniproblems table and also will send email to our email. as a form.
+
+Use only macedonian cyrilic texts for the forntend with some good font.
