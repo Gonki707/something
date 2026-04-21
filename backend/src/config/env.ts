@@ -1,14 +1,19 @@
 import 'dotenv/config';
 
-function required(name: string, fallback?: string): string {
-  const v = process.env[name] ?? fallback;
-  if (!v) throw new Error(`Missing required env var: ${name}`);
-  return v;
+const isProd = process.env.NODE_ENV === 'production';
+
+function required(name: string, devFallback?: string): string {
+  const raw = process.env[name];
+  if (raw && raw.length > 0) return raw;
+  if (!isProd && devFallback) return devFallback;
+  throw new Error(`Missing required env var: ${name}`);
 }
 
 export const env = {
   DATABASE_URL: required('DATABASE_URL', 'postgres://postgres:postgres@localhost:5432/mavrovo'),
   JWT_SECRET: required('JWT_SECRET', 'dev-secret-change-me'),
+  NODE_ENV: process.env.NODE_ENV || 'development',
+  IS_PROD: isProd,
   PORT: Number(process.env.PORT || 4000),
   CORS_ORIGIN: process.env.CORS_ORIGIN || 'http://localhost:5173',
   DEFAULT_ADMIN_EMAIL: process.env.DEFAULT_ADMIN_EMAIL || 'admin@mavrovo.gov.mk',

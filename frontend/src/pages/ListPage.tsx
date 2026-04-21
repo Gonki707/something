@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
 import { useFetch } from '../hooks/useFetch';
-import { publicGet } from '../api/entities';
+import { publicGet, publicGetOne } from '../api/entities';
 import type {
   LookupRow, ObjavaRow, GlasnikRow, VrabotenRow,
   BudzetRow, LegislativaRow, ProektRow, InstitucijaRow,
@@ -61,7 +61,7 @@ export function ObjaviList() {
 export function ObjavaDetail() {
   const { id } = useParams();
   const { data, loading } = useFetch<ObjavaRow | null>(
-    () => publicGet<ObjavaRow>('odnosi-so-javnost').then((arr) => arr.find((x) => x.id === Number(id)) ?? null),
+    () => publicGetOne<ObjavaRow>('odnosi-so-javnost', id!).catch(() => null),
     [id],
   );
   return (
@@ -142,8 +142,10 @@ export function VraboteniPage() {
 
 export function VrabotenDetail() {
   const { id } = useParams();
-  const { data } = useFetch<VrabotenRow[]>(() => publicGet('vraboteni'), [id]);
-  const v = (data || []).find((x) => x.id === Number(id));
+  const { data: v } = useFetch<VrabotenRow | null>(
+    () => publicGetOne<VrabotenRow>('vraboteni', id!).catch(() => null),
+    [id],
+  );
   return (
     <div className="page">
       <div className="container">
@@ -192,8 +194,10 @@ export function BudzetPage() {
 
 export function BudzetDetail() {
   const { id } = useParams();
-  const { data } = useFetch<BudzetRow[]>(() => publicGet('budzet'), [id]);
-  const b = (data || []).find((x) => x.id === Number(id));
+  const { data: b } = useFetch<BudzetRow | null>(
+    () => publicGetOne<BudzetRow>('budzet', id!).catch(() => null),
+    [id],
+  );
   return (
     <div className="page">
       <div className="container">
@@ -239,8 +243,10 @@ export function ProektiPage() {
 
 export function ProektDetail() {
   const { id } = useParams();
-  const { data } = useFetch<ProektRow[]>(() => publicGet('proekti'), [id]);
-  const p = (data || []).find((x) => x.id === Number(id));
+  const { data: p } = useFetch<ProektRow | null>(
+    () => publicGetOne<ProektRow>('proekti', id!).catch(() => null),
+    [id],
+  );
   return (
     <div className="page">
       <div className="container">
@@ -292,8 +298,10 @@ export function LegislativaPage() {
 
 export function InstitucionDetail() {
   const { id } = useParams();
-  const { data } = useFetch<InstitucijaRow[]>(() => publicGet('institucii'));
-  const inst = (data || []).find((i) => i.id === Number(id));
+  const { data: inst } = useFetch<InstitucijaRow | null>(
+    () => publicGetOne<InstitucijaRow>('institucii', id!).catch(() => null),
+    [id],
+  );
   return (
     <div className="page">
       <div className="container">
@@ -339,8 +347,10 @@ export function NaseleniMestaPage() {
 
 export function GlasnikDetail() {
   const { id } = useParams();
-  const { data } = useFetch<GlasnikRow[]>(() => publicGet('sluzben-glasnik'), [id]);
-  const g = (data || []).find((x) => x.id === Number(id));
+  const { data: g } = useFetch<GlasnikRow | null>(
+    () => publicGetOne<GlasnikRow>('sluzben-glasnik', id!).catch(() => null),
+    [id],
+  );
   return (
     <div className="page">
       <div className="container">
@@ -361,9 +371,11 @@ export function GlasnikDetail() {
 
 export function LegislativaDetail() {
   const { id } = useParams();
-  const { data } = useFetch<LegislativaRow[]>(() => publicGet('legislativa'), [id]);
+  const { data: l } = useFetch<LegislativaRow | null>(
+    () => publicGetOne<LegislativaRow>('legislativa', id!).catch(() => null),
+    [id],
+  );
   const { data: types } = useFetch<LookupRow[]>(() => publicGet('type-legislativa'));
-  const l = (data || []).find((x) => x.id === Number(id));
   const typeName = l && l.typeId != null ? types?.find((t) => t.id === l.typeId)?.title : undefined;
   return (
     <div className="page">

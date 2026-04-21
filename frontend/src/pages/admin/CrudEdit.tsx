@@ -112,7 +112,18 @@ export default function CrudEdit() {
         return (
           <div>
             <input type="file" accept="image/*" onChange={(e) => onUploadImage(f.key, e.target.files?.[0] || null)} />
-            {valStr && <div style={{ marginTop: 6 }}><a href={valStr} target="_blank" rel="noreferrer">📄 Тековна датотека</a> · <button type="button" className="btn sm" onClick={() => setField(f.key, null)}>Отстрани</button></div>}
+            {valStr && <div style={{ marginTop: 6 }}><a href={valStr} target="_blank" rel="noreferrer">🖼️ Тековна слика</a> · <button type="button" className="btn sm" onClick={() => setField(f.key, null)}>Отстрани</button></div>}
+          </div>
+        );
+      case 'document':
+        return (
+          <div>
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain"
+              onChange={(e) => onUploadImage(f.key, e.target.files?.[0] || null)}
+            />
+            {valStr && <div style={{ marginTop: 6 }}><a href={valStr} target="_blank" rel="noreferrer">📄 Тековен документ</a> · <button type="button" className="btn sm" onClick={() => setField(f.key, null)}>Отстрани</button></div>}
           </div>
         );
       case 'documents': {

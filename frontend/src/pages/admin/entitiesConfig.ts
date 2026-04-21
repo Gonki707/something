@@ -1,6 +1,6 @@
 export type FieldType =
   | 'text' | 'textarea' | 'email' | 'number' | 'date' | 'datetime' | 'password'
-  | 'select' | 'image' | 'documents' | 'url';
+  | 'select' | 'image' | 'document' | 'documents' | 'url';
 
 export interface Field {
   key: string;
@@ -40,7 +40,7 @@ export const ADMIN_ENTITIES: Record<string, EntityCfg> = {
     fields: [
       { key: 'broj', label: 'Број', type: 'text', required: true, showInList: true },
       { key: 'date', label: 'Датум', type: 'date', showInList: true },
-      { key: 'document', label: 'Документ', type: 'image' },
+      { key: 'document', label: 'Документ', type: 'document' },
     ],
   },
   'vraboteni': {
@@ -84,7 +84,7 @@ export const ADMIN_ENTITIES: Record<string, EntityCfg> = {
     fields: [
       { key: 'typeId', label: 'Тип', type: 'select', lookup: 'type-legislativa', required: true, showInList: true },
       { key: 'title', label: 'Наслов', type: 'text', showInList: true },
-      { key: 'document', label: 'Документ', type: 'image' },
+      { key: 'document', label: 'Документ', type: 'document' },
     ],
   },
   'proekti': {

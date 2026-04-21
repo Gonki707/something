@@ -59,6 +59,10 @@ export default function CrudList() {
     }
     if (f.type === 'image') {
       const s = String(v);
+      return <a href={s} target="_blank" rel="noreferrer">🖼️</a>;
+    }
+    if (f.type === 'document') {
+      const s = String(v);
       return <a href={s} target="_blank" rel="noreferrer">📄</a>;
     }
     if (Array.isArray(v)) return `${v.length} датотеки`;
