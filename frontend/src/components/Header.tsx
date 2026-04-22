@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { useFetch } from '../hooks/useFetch';
 import { publicGet } from '../api/entities';
+import Icon from './Icon';
 
 interface Institucija { id: number; nameOfInstitution: string; }
 
@@ -25,8 +26,16 @@ export default function Header() {
     <header className="site-header">
       <div className="header-top">
         <div className="container">
-          <span>Општина Маврово и Ростуше · info@mavrovo.gov.mk</span>
-          <span><Link to="/prijavi-problem">Пријави проблем</Link> · <Link to="/admin">Админ</Link></span>
+          <span className="ht-left">
+            <Icon name="mail" size={14} /> info@mavrovo.gov.mk
+            <span className="dot" />
+            <Icon name="phone" size={14} /> +389 42 478 814
+          </span>
+          <span className="ht-right">
+            <Link to="/prijavi-problem"><Icon name="alert" size={14} /> Пријави проблем</Link>
+            <span className="dot" />
+            <Link to="/admin"><Icon name="login" size={14} /> Админ</Link>
+          </span>
         </div>
       </div>
       <div className="container header-main" ref={ref}>
@@ -40,70 +49,75 @@ export default function Header() {
 
         <nav className="nav">
           <div className="nav-item">
-            <button className="nav-link" onClick={() => toggle('zapoznaj')}>
-              Запознај ја општината <span className="chev">▾</span>
+            <button className={`nav-link ${open === 'zapoznaj' ? 'is-open' : ''}`} onClick={() => toggle('zapoznaj')}>
+              <Icon name="compass" size={18} />
+              <span>Запознај ја општината</span>
+              <Icon name="chevron" size={14} className="chev" />
             </button>
             {open === 'zapoznaj' && (
               <div className="dropdown">
                 <div className="dropdown-section">
-                  <Link to="/mestopolozba" onClick={close}>Местоположба</Link>
-                  <Link to="/naseleni-mesta" onClick={close}>Населени места</Link>
-                  <Link to="/prirodni-bogatstva" onClick={close}>Природни богатства</Link>
+                  <Link to="/mestopolozba" onClick={close}><Icon name="pin" size={16} /> Местоположба</Link>
+                  <Link to="/naseleni-mesta" onClick={close}><Icon name="home" size={16} /> Населени места</Link>
+                  <Link to="/prirodni-bogatstva" onClick={close}><Icon name="globe" size={16} /> Природни богатства</Link>
                 </div>
               </div>
             )}
           </div>
 
           <div className="nav-item">
-            <button className="nav-link" onClick={() => toggle('meni')}>
-              Мени <span className="chev">▾</span>
+            <button className={`nav-link ${open === 'meni' ? 'is-open' : ''}`} onClick={() => toggle('meni')}>
+              <Icon name="menu" size={18} />
+              <span>Мени</span>
+              <Icon name="chevron" size={14} className="chev" />
             </button>
             {open === 'meni' && (
               <div className="dropdown wide" style={{ left: 'auto', right: 0 }}>
                 <div className="mega-grid">
                   <div className="dropdown-section">
-                    <h4>Локална самоуправа</h4>
-                    <Link to="/gradonacalnik" onClick={close}>Градоначалник</Link>
-                    <Link to="/vraboteni" onClick={close}>Вработени</Link>
-                    <Link to="/sovet-na-opstinata" onClick={close}>Совет на општината</Link>
+                    <h4><Icon name="building" size={14} /> Локална самоуправа</h4>
+                    <Link to="/gradonacalnik" onClick={close}><Icon name="briefcase" size={16} /> Градоначалник</Link>
+                    <Link to="/vraboteni" onClick={close}><Icon name="users" size={16} /> Вработени</Link>
+                    <Link to="/sovet-na-opstinata" onClick={close}><Icon name="users" size={16} /> Совет на општината</Link>
+                    <Link to="/organogram" onClick={close}><Icon name="project" size={16} /> Органограм</Link>
                     <div className="dropdown-divider" />
-                    <h4>Институции</h4>
+                    <h4><Icon name="building" size={14} /> Институции</h4>
                     {institucii?.length ? institucii.map((i) => (
-                      <Link key={i.id} to={`/institucii/${i.id}`} onClick={close}>{i.nameOfInstitution}</Link>
+                      <Link key={i.id} to={`/institucii/${i.id}`} onClick={close}>
+                        <Icon name="building" size={16} /> {i.nameOfInstitution}
+                      </Link>
                     )) : <span style={{ color: 'var(--muted)', fontSize: '.85rem' }}>Нема податоци</span>}
-                    <div className="dropdown-divider" />
-                    <Link to="/organogram" onClick={close}>Органограм</Link>
                   </div>
 
                   <div className="dropdown-section">
-                    <h4>Односи со јавност</h4>
-                    <Link to="/objavi/Новости" onClick={close}>Новости</Link>
-                    <Link to="/objavi/Соопштенија" onClick={close}>Соопштенија</Link>
-                    <Link to="/objavi/Огласи" onClick={close}>Огласи</Link>
-                    <Link to="/objavi/Конкурси" onClick={close}>Конкурси</Link>
-                    <Link to="/sluzben-glasnik" onClick={close}>Службен гласник</Link>
-                    <Link to="/objavi/Пристап до информации" onClick={close}>Пристап до информации од јавен карактер</Link>
+                    <h4><Icon name="megaphone" size={14} /> Односи со јавност</h4>
+                    <Link to="/objavi/Новости" onClick={close}><Icon name="newspaper" size={16} /> Новости</Link>
+                    <Link to="/objavi/Соопштенија" onClick={close}><Icon name="megaphone" size={16} /> Соопштенија</Link>
+                    <Link to="/objavi/Огласи" onClick={close}><Icon name="document" size={16} /> Огласи</Link>
+                    <Link to="/objavi/Конкурси" onClick={close}><Icon name="briefcase" size={16} /> Конкурси</Link>
+                    <Link to="/sluzben-glasnik" onClick={close}><Icon name="newspaper" size={16} /> Службен гласник</Link>
+                    <Link to="/objavi/Пристап до информации" onClick={close}><Icon name="folder" size={16} /> Пристап до информации</Link>
                   </div>
 
                   <div className="mega-stack">
                     <div className="dropdown-section">
-                      <h4>Финансии</h4>
-                      <Link to="/budzet" onClick={close}>Буџет на општината</Link>
-                      <Link to="/finansiska-transparentnost" onClick={close}>Финансиска транспарентност</Link>
-                      <Link to="/danoci" onClick={close}>Даноци</Link>
-                      <Link to="/uplatnici" onClick={close}>Примери уплатници</Link>
+                      <h4><Icon name="wallet" size={14} /> Финансии</h4>
+                      <Link to="/budzet" onClick={close}><Icon name="wallet" size={16} /> Буџет на општината</Link>
+                      <Link to="/finansiska-transparentnost" onClick={close}><Icon name="document" size={16} /> Финансиска транспарентност</Link>
+                      <Link to="/danoci" onClick={close}><Icon name="document" size={16} /> Даноци</Link>
+                      <Link to="/uplatnici" onClick={close}><Icon name="document" size={16} /> Примери уплатници</Link>
                     </div>
 
                     <div className="dropdown-section">
-                      <h4>Легислатива</h4>
-                      <Link to="/legislativa/Обрасци" onClick={close}>Обрасци</Link>
-                      <Link to="/legislativa/Закони" onClick={close}>Закони</Link>
-                      <Link to="/legislativa/Статут и кодекс" onClick={close}>Статут и кодекс</Link>
+                      <h4><Icon name="gavel" size={14} /> Легислатива</h4>
+                      <Link to="/legislativa/Обрасци" onClick={close}><Icon name="document" size={16} /> Обрасци</Link>
+                      <Link to="/legislativa/Закони" onClick={close}><Icon name="gavel" size={16} /> Закони</Link>
+                      <Link to="/legislativa/Статут и кодекс" onClick={close}><Icon name="folder" size={16} /> Статут и кодекс</Link>
                     </div>
 
                     <div className="dropdown-section">
-                      <h4>Проекти</h4>
-                      <Link to="/proekti" onClick={close}>Проекти</Link>
+                      <h4><Icon name="project" size={14} /> Проекти</h4>
+                      <Link to="/proekti" onClick={close}><Icon name="project" size={16} /> Проекти</Link>
                     </div>
                   </div>
                 </div>
@@ -111,15 +125,19 @@ export default function Header() {
             )}
           </div>
 
-          <NavLink to="/prijavi-problem" className="nav-link" onClick={close} style={{ color: 'var(--accent-2)' }}>
-            Пријави проблем
+          <NavLink to="/prijavi-problem" className="nav-link cta-link" onClick={close}>
+            <Icon name="alert" size={18} />
+            <span>Пријави проблем</span>
           </NavLink>
 
-          <select className="lang-select" defaultValue="MK" aria-label="Јазик">
-            <option value="MK">МК</option>
-            <option value="SQ">SQ</option>
-            <option value="EN">EN</option>
-          </select>
+          <div className="lang-wrap">
+            <Icon name="globe" size={16} />
+            <select className="lang-select" defaultValue="MK" aria-label="Јазик">
+              <option value="MK">МК</option>
+              <option value="SQ">SQ</option>
+              <option value="EN">EN</option>
+            </select>
+          </div>
         </nav>
       </div>
     </header>
