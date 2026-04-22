@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useFetch } from '../hooks/useFetch';
 import { publicGet } from '../api/entities';
 
@@ -26,11 +26,7 @@ export default function Header() {
       <div className="header-top">
         <div className="container">
           <span>Општина Маврово и Ростуше · info@mavrovo.gov.mk · +389 42 478 814</span>
-          <span>
-            <Link to="/prijavi-problem">Пријави проблем</Link>
-            <span style={{ margin: '0 .5rem', opacity: .4 }}>·</span>
-            <Link to="/admin">Админ</Link>
-          </span>
+          <span><Link to="/admin">Админ</Link></span>
         </div>
       </div>
       <div className="container header-main" ref={ref}>
@@ -66,14 +62,16 @@ export default function Header() {
             </button>
             {open === 'meni' && (
               <div className="dropdown wide" style={{ left: 'auto', right: 0 }}>
-                <div className="mega-grid">
+                <div className="mega-grid mega-5">
                   <div className="dropdown-section">
                     <h4>Локална самоуправа</h4>
                     <Link to="/gradonacalnik" onClick={close}>Градоначалник</Link>
                     <Link to="/vraboteni" onClick={close}>Вработени</Link>
                     <Link to="/sovet-na-opstinata" onClick={close}>Совет на општината</Link>
                     <Link to="/organogram" onClick={close}>Органограм</Link>
-                    <div className="dropdown-divider" />
+                  </div>
+
+                  <div className="dropdown-section">
                     <h4>Институции</h4>
                     {institucii?.length ? institucii.map((i) => (
                       <Link key={i.id} to={`/institucii/${i.id}`} onClick={close}>{i.nameOfInstitution}</Link>
@@ -90,35 +88,26 @@ export default function Header() {
                     <Link to="/objavi/Пристап до информации" onClick={close}>Пристап до информации</Link>
                   </div>
 
-                  <div className="mega-stack">
-                    <div className="dropdown-section">
-                      <h4>Финансии</h4>
-                      <Link to="/budzet" onClick={close}>Буџет на општината</Link>
-                      <Link to="/finansiska-transparentnost" onClick={close}>Финансиска транспарентност</Link>
-                      <Link to="/danoci" onClick={close}>Даноци</Link>
-                      <Link to="/uplatnici" onClick={close}>Примери уплатници</Link>
-                    </div>
+                  <div className="dropdown-section">
+                    <h4>Финансии</h4>
+                    <Link to="/budzet" onClick={close}>Буџет на општината</Link>
+                    <Link to="/finansiska-transparentnost" onClick={close}>Финансиска транспарентност</Link>
+                    <Link to="/danoci" onClick={close}>Даноци</Link>
+                    <Link to="/uplatnici" onClick={close}>Примери уплатници</Link>
+                  </div>
 
-                    <div className="dropdown-section">
-                      <h4>Легислатива</h4>
-                      <Link to="/legislativa/Обрасци" onClick={close}>Обрасци</Link>
-                      <Link to="/legislativa/Закони" onClick={close}>Закони</Link>
-                      <Link to="/legislativa/Статут и кодекс" onClick={close}>Статут и кодекс</Link>
-                    </div>
-
-                    <div className="dropdown-section">
-                      <h4>Проекти</h4>
-                      <Link to="/proekti" onClick={close}>Проекти</Link>
-                    </div>
+                  <div className="dropdown-section">
+                    <h4>Легислатива и проекти</h4>
+                    <Link to="/legislativa/Обрасци" onClick={close}>Обрасци</Link>
+                    <Link to="/legislativa/Закони" onClick={close}>Закони</Link>
+                    <Link to="/legislativa/Статут и кодекс" onClick={close}>Статут и кодекс</Link>
+                    <div className="dropdown-divider" />
+                    <Link to="/proekti" onClick={close}>Проекти</Link>
                   </div>
                 </div>
               </div>
             )}
           </div>
-
-          <NavLink to="/prijavi-problem" className="nav-link cta-link" onClick={close}>
-            Пријави проблем
-          </NavLink>
 
           <select className="lang-select" defaultValue="MK" aria-label="Јазик">
             <option value="MK">МК</option>
