@@ -3,34 +3,559 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: API for the municipality citizen portal
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: news
+  - name: announcements
+  - name: tenders
+  - name: competitions
+  - name: gazette
+  - name: projects
+  - name: legislation
+  - name: site
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/HealthStatus"
+              schema: { $ref: "#/components/schemas/HealthStatus" }
+
+  /site/summary:
+    get:
+      operationId: getSiteSummary
+      tags: [site]
+      summary: Homepage aggregate (counts + latest items per section)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SiteSummary" }
+
+  /news:
+    get:
+      operationId: listNews
+      tags: [news]
+      summary: List news (Новости) with search, filters, pagination
+      parameters:
+        - $ref: "#/components/parameters/QueryQ"
+        - $ref: "#/components/parameters/QueryYear"
+        - $ref: "#/components/parameters/QueryCategory"
+        - $ref: "#/components/parameters/QueryPage"
+        - $ref: "#/components/parameters/QueryPageSize"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NewsListPage" }
+  /news/{id}:
+    get:
+      operationId: getNews
+      tags: [news]
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NewsItem" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /announcements:
+    get:
+      operationId: listAnnouncements
+      tags: [announcements]
+      summary: List announcements (Соопштенија)
+      parameters:
+        - $ref: "#/components/parameters/QueryQ"
+        - $ref: "#/components/parameters/QueryYear"
+        - $ref: "#/components/parameters/QueryCategory"
+        - $ref: "#/components/parameters/QueryPage"
+        - $ref: "#/components/parameters/QueryPageSize"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AnnouncementListPage" }
+  /announcements/{id}:
+    get:
+      operationId: getAnnouncement
+      tags: [announcements]
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AnnouncementItem" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /tenders:
+    get:
+      operationId: listTenders
+      tags: [tenders]
+      summary: List tenders (Огласи)
+      parameters:
+        - $ref: "#/components/parameters/QueryQ"
+        - $ref: "#/components/parameters/QueryYear"
+        - $ref: "#/components/parameters/QueryStatus"
+        - $ref: "#/components/parameters/QueryPage"
+        - $ref: "#/components/parameters/QueryPageSize"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TenderListPage" }
+  /tenders/{id}:
+    get:
+      operationId: getTender
+      tags: [tenders]
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TenderItem" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /competitions:
+    get:
+      operationId: listCompetitions
+      tags: [competitions]
+      summary: List competitions (Конкурси)
+      parameters:
+        - $ref: "#/components/parameters/QueryQ"
+        - $ref: "#/components/parameters/QueryYear"
+        - $ref: "#/components/parameters/QueryStatus"
+        - $ref: "#/components/parameters/QueryPage"
+        - $ref: "#/components/parameters/QueryPageSize"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CompetitionListPage" }
+  /competitions/{id}:
+    get:
+      operationId: getCompetition
+      tags: [competitions]
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CompetitionItem" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /gazette:
+    get:
+      operationId: listGazette
+      tags: [gazette]
+      summary: List official gazette issues (Службен гласник)
+      parameters:
+        - $ref: "#/components/parameters/QueryQ"
+        - $ref: "#/components/parameters/QueryYear"
+        - $ref: "#/components/parameters/QueryPage"
+        - $ref: "#/components/parameters/QueryPageSize"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GazetteListPage" }
+  /gazette/{id}:
+    get:
+      operationId: getGazette
+      tags: [gazette]
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GazetteItem" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /projects:
+    get:
+      operationId: listProjects
+      tags: [projects]
+      summary: List projects (Проекти)
+      parameters:
+        - $ref: "#/components/parameters/QueryQ"
+        - $ref: "#/components/parameters/QueryYear"
+        - $ref: "#/components/parameters/QueryCategory"
+        - $ref: "#/components/parameters/QueryStatus"
+        - $ref: "#/components/parameters/QueryPage"
+        - $ref: "#/components/parameters/QueryPageSize"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProjectListPage" }
+  /projects/{id}:
+    get:
+      operationId: getProject
+      tags: [projects]
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProjectItem" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /legislation:
+    get:
+      operationId: listLegislation
+      tags: [legislation]
+      summary: List legislation documents (Легислатива)
+      parameters:
+        - $ref: "#/components/parameters/QueryQ"
+        - $ref: "#/components/parameters/QueryYear"
+        - $ref: "#/components/parameters/QueryCategory"
+        - $ref: "#/components/parameters/QueryPage"
+        - $ref: "#/components/parameters/QueryPageSize"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LegislationListPage" }
+  /legislation/{id}:
+    get:
+      operationId: getLegislation
+      tags: [legislation]
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LegislationItem" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
 components:
+  parameters:
+    PathId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    QueryQ:
+      name: q
+      in: query
+      required: false
+      description: Free-text search across title and summary
+      schema: { type: string }
+    QueryYear:
+      name: year
+      in: query
+      required: false
+      description: Filter by publication year (e.g. 2025)
+      schema: { type: integer, minimum: 1990, maximum: 2100 }
+    QueryCategory:
+      name: category
+      in: query
+      required: false
+      schema: { type: string }
+    QueryStatus:
+      name: status
+      in: query
+      required: false
+      schema: { type: string, enum: [open, closed, ongoing, completed, planned] }
+    QueryPage:
+      name: page
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, default: 1 }
+    QueryPageSize:
+      name: pageSize
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 100, default: 12 }
+
+  responses:
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
-        status:
-          type: string
-      required:
-        - status
+        status: { type: string }
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+    Pagination:
+      type: object
+      required: [page, pageSize, total, totalPages]
+      properties:
+        page: { type: integer }
+        pageSize: { type: integer }
+        total: { type: integer }
+        totalPages: { type: integer }
+    YearCount:
+      type: object
+      required: [year, count]
+      properties:
+        year: { type: integer }
+        count: { type: integer }
 
+    NewsItem:
+      type: object
+      required: [id, title, summary, body, category, publishedAt, year]
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        summary: { type: string }
+        body: { type: string }
+        category: { type: string }
+        coverImageUrl: { type: ["string", "null"] }
+        publishedAt: { type: string, format: date-time }
+        year: { type: integer }
+    NewsListPage:
+      type: object
+      required: [items, pagination, availableYears, availableCategories]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/NewsItem" }
+        pagination: { $ref: "#/components/schemas/Pagination" }
+        availableYears:
+          type: array
+          items: { $ref: "#/components/schemas/YearCount" }
+        availableCategories:
+          type: array
+          items: { type: string }
+
+    AnnouncementItem:
+      type: object
+      required: [id, title, summary, body, category, publishedAt, year]
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        summary: { type: string }
+        body: { type: string }
+        category: { type: string }
+        publishedAt: { type: string, format: date-time }
+        year: { type: integer }
+    AnnouncementListPage:
+      type: object
+      required: [items, pagination, availableYears, availableCategories]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AnnouncementItem" }
+        pagination: { $ref: "#/components/schemas/Pagination" }
+        availableYears:
+          type: array
+          items: { $ref: "#/components/schemas/YearCount" }
+        availableCategories:
+          type: array
+          items: { type: string }
+
+    TenderItem:
+      type: object
+      required: [id, title, summary, body, status, publishedAt, deadline, year]
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        summary: { type: string }
+        body: { type: string }
+        status: { type: string, enum: [open, closed] }
+        publishedAt: { type: string, format: date-time }
+        deadline: { type: string, format: date-time }
+        year: { type: integer }
+    TenderListPage:
+      type: object
+      required: [items, pagination, availableYears, availableStatuses]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/TenderItem" }
+        pagination: { $ref: "#/components/schemas/Pagination" }
+        availableYears:
+          type: array
+          items: { $ref: "#/components/schemas/YearCount" }
+        availableStatuses:
+          type: array
+          items: { type: string }
+
+    CompetitionItem:
+      type: object
+      required: [id, title, summary, body, status, publishedAt, deadline, year]
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        summary: { type: string }
+        body: { type: string }
+        status: { type: string, enum: [open, closed] }
+        publishedAt: { type: string, format: date-time }
+        deadline: { type: string, format: date-time }
+        year: { type: integer }
+    CompetitionListPage:
+      type: object
+      required: [items, pagination, availableYears, availableStatuses]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/CompetitionItem" }
+        pagination: { $ref: "#/components/schemas/Pagination" }
+        availableYears:
+          type: array
+          items: { $ref: "#/components/schemas/YearCount" }
+        availableStatuses:
+          type: array
+          items: { type: string }
+
+    GazetteItem:
+      type: object
+      required: [id, issueNumber, title, summary, publishedAt, year, fileUrl]
+      properties:
+        id: { type: integer }
+        issueNumber: { type: string }
+        title: { type: string }
+        summary: { type: string }
+        publishedAt: { type: string, format: date-time }
+        year: { type: integer }
+        fileUrl: { type: string }
+    GazetteListPage:
+      type: object
+      required: [items, pagination, availableYears]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/GazetteItem" }
+        pagination: { $ref: "#/components/schemas/Pagination" }
+        availableYears:
+          type: array
+          items: { $ref: "#/components/schemas/YearCount" }
+
+    ProjectItem:
+      type: object
+      required: [id, title, summary, body, category, status, publishedAt, year, budget]
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        summary: { type: string }
+        body: { type: string }
+        category: { type: string }
+        status: { type: string, enum: [planned, ongoing, completed] }
+        coverImageUrl: { type: ["string", "null"] }
+        publishedAt: { type: string, format: date-time }
+        year: { type: integer }
+        budget: { type: ["string", "null"] }
+    ProjectListPage:
+      type: object
+      required: [items, pagination, availableYears, availableCategories, availableStatuses]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ProjectItem" }
+        pagination: { $ref: "#/components/schemas/Pagination" }
+        availableYears:
+          type: array
+          items: { $ref: "#/components/schemas/YearCount" }
+        availableCategories:
+          type: array
+          items: { type: string }
+        availableStatuses:
+          type: array
+          items: { type: string }
+
+    LegislationItem:
+      type: object
+      required: [id, title, summary, body, category, publishedAt, year, fileUrl]
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        summary: { type: string }
+        body: { type: string }
+        category: { type: string }
+        publishedAt: { type: string, format: date-time }
+        year: { type: integer }
+        fileUrl: { type: string }
+    LegislationListPage:
+      type: object
+      required: [items, pagination, availableYears, availableCategories]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/LegislationItem" }
+        pagination: { $ref: "#/components/schemas/Pagination" }
+        availableYears:
+          type: array
+          items: { $ref: "#/components/schemas/YearCount" }
+        availableCategories:
+          type: array
+          items: { type: string }
+
+    SectionCount:
+      type: object
+      required: [section, count]
+      properties:
+        section: { type: string }
+        count: { type: integer }
+    SiteSummary:
+      type: object
+      required:
+        - counts
+        - latestNews
+        - latestAnnouncements
+        - openTenders
+        - openCompetitions
+        - latestGazette
+        - latestProjects
+      properties:
+        counts:
+          type: array
+          items: { $ref: "#/components/schemas/SectionCount" }
+        latestNews:
+          type: array
+          items: { $ref: "#/components/schemas/NewsItem" }
+        latestAnnouncements:
+          type: array
+          items: { $ref: "#/components/schemas/AnnouncementItem" }
+        openTenders:
+          type: array
+          items: { $ref: "#/components/schemas/TenderItem" }
+        openCompetitions:
+          type: array
+          items: { $ref: "#/components/schemas/CompetitionItem" }
+        latestGazette:
+          type: array
+          items: { $ref: "#/components/schemas/GazetteItem" }
+        latestProjects:
+          type: array
+          items: { $ref: "#/components/schemas/ProjectItem" }
