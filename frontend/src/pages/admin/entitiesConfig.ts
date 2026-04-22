@@ -113,6 +113,7 @@ export const ADMIN_ENTITIES: Record<string, EntityCfg> = {
       { key: 'nameOfInstitution', label: 'Назив', type: 'text', required: true, showInList: true },
       { key: 'mestoNaseleno', label: 'Место', type: 'text', showInList: true },
       { key: 'directorFullName', label: 'Директор', type: 'text', showInList: true },
+      { key: 'directorPicture', label: 'Слика на директор', type: 'image' },
       { key: 'directorBiography', label: 'Биографија', type: 'textarea' },
       { key: 'email', label: 'Е-маил', type: 'email' },
       { key: 'website', label: 'Веб', type: 'url' },

@@ -313,8 +313,21 @@ export function InstitucionDetail() {
               <div style={{ color: 'var(--muted)' }}>{inst.mestoNaseleno}</div>
             </div>
             <div className="card" style={{ padding: '1.5rem' }}>
-              {inst.directorFullName && <p><strong>Директор:</strong> {inst.directorFullName}</p>}
-              {inst.directorBiography && <p>{inst.directorBiography}</p>}
+              {inst.directorFullName && (
+                <div className="director-block">
+                  <img
+                    className="director-photo"
+                    src={inst.directorPicture && inst.directorPicture.trim() ? inst.directorPicture : 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?auto=format&fit=crop&w=600&q=80'}
+                    alt={inst.directorFullName}
+                    loading="lazy"
+                  />
+                  <div>
+                    <small className="director-label">Директор</small>
+                    <h3 className="director-name">{inst.directorFullName}</h3>
+                    {inst.directorBiography && <p className="director-bio">{inst.directorBiography}</p>}
+                  </div>
+                </div>
+              )}
               {inst.email && <p>📧 <a href={`mailto:${inst.email}`}>{inst.email}</a></p>}
               {inst.website && <p>🌐 <a href={inst.website} target="_blank" rel="noreferrer">{inst.website}</a></p>}
               {inst.facebook && <p>📘 <a href={inst.facebook} target="_blank" rel="noreferrer">Facebook</a></p>}

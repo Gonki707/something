@@ -55,6 +55,7 @@ export interface InstitucijaRow {
   nameOfInstitution: string;
   mestoNaseleno: string | null;
   directorFullName: string | null;
+  directorPicture: string | null;
   directorBiography: string | null;
   email: string | null;
   website: string | null;

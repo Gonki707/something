@@ -3,6 +3,7 @@ import { useFetch } from '../hooks/useFetch';
 import { publicGet } from '../api/entities';
 import Calendar from '../components/Calendar';
 import Icon from '../components/Icon';
+import { DEFAULT_PHOTO, DEFAULT_PORTRAIT, photoOrDefault } from '../lib/defaults';
 
 interface Objava { id: number; typeId: number; title: string; description: string | null; picture: string | null; createdAt: string; }
 interface Agenda { id: number; dateTime: string; title: string; description: string | null; }
@@ -26,9 +27,7 @@ export default function Home() {
     <div className="cards cards-3">
       {items.map((n) => (
         <Link key={n.id} to={`/objavi-detalji/${n.id}`} className="card" style={{ color: 'inherit' }}>
-          <div className="card-cover" style={{ background: n.picture ? `url(${n.picture}) center/cover` : 'linear-gradient(135deg,#1f7a8c,#0c3b5c)' }}>
-            {!n.picture && <Icon name="newspaper" size={48} />}
-          </div>
+          <div className="card-cover" style={{ background: `url(${photoOrDefault(n.picture, DEFAULT_PHOTO)}) center/cover` }} />
           <div className="card-body">
             <span className="meta">
               <Icon name="calendar" size={14} />
@@ -110,7 +109,7 @@ export default function Home() {
           </div>
           <div className="mayor-card">
             <div className="mayor-photo">
-              <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=600&q=80" alt="Портрет на градоначалникот" loading="lazy" />
+              <img src={DEFAULT_PORTRAIT} alt="Портрет на градоначалникот" loading="lazy" />
             </div>
             <div className="mayor-body">
               <span className="tag">Кабинет на градоначалник</span>

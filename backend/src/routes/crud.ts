@@ -369,6 +369,7 @@ const institucijaCreate = z.object({
   nameOfInstitution: trimmed.min(1).max(500),
   mestoNaseleno: optStr,
   directorFullName: optStr,
+  directorPicture: optStr,
   directorBiography: optText,
   email: optEmail,
   website: optUrl,
@@ -382,6 +383,7 @@ function toInstitucijaInsert(i: z.output<typeof institucijaCreate>): Institucija
     nameOfInstitution: i.nameOfInstitution,
     mestoNaseleno: i.mestoNaseleno ?? null,
     directorFullName: i.directorFullName ?? null,
+    directorPicture: i.directorPicture ?? null,
     directorBiography: i.directorBiography ?? null,
     email: i.email ?? null,
     website: i.website ?? null,
@@ -394,6 +396,7 @@ function toInstitucijaUpdate(i: z.output<typeof institucijaUpdate>): Partial<Ins
   if (i.nameOfInstitution !== undefined) out.nameOfInstitution = i.nameOfInstitution;
   if (i.mestoNaseleno !== undefined) out.mestoNaseleno = i.mestoNaseleno;
   if (i.directorFullName !== undefined) out.directorFullName = i.directorFullName;
+  if (i.directorPicture !== undefined) out.directorPicture = i.directorPicture;
   if (i.directorBiography !== undefined) out.directorBiography = i.directorBiography;
   if (i.email !== undefined) out.email = i.email;
   if (i.website !== undefined) out.website = i.website;

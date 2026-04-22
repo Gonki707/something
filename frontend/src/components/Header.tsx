@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useFetch } from '../hooks/useFetch';
 import { publicGet } from '../api/entities';
+import MayorMeetingButton from './MayorMeetingButton';
 
 interface Institucija { id: number; nameOfInstitution: string; }
 
@@ -26,7 +27,7 @@ export default function Header() {
       <div className="header-top">
         <div className="container">
           <span>Општина Маврово и Ростуше · info@mavrovo.gov.mk · +389 42 478 814</span>
-          <span><Link to="/admin">Админ</Link></span>
+          <MayorMeetingButton />
         </div>
       </div>
       <div className="container header-main" ref={ref}>
@@ -109,11 +110,6 @@ export default function Header() {
             )}
           </div>
 
-          <select className="lang-select" defaultValue="MK" aria-label="Јазик">
-            <option value="MK">МК</option>
-            <option value="SQ">SQ</option>
-            <option value="EN">EN</option>
-          </select>
         </nav>
       </div>
     </header>

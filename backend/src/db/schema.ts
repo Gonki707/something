@@ -114,6 +114,7 @@ export const institucii = pgTable('institucii', {
   nameOfInstitution: varchar('name_of_institution', { length: 500 }).notNull(),
   mestoNaseleno: varchar('mesto_naseleno', { length: 255 }),
   directorFullName: varchar('director_full_name', { length: 255 }),
+  directorPicture: varchar('director_picture', { length: 500 }),
   directorBiography: text('director_biography'),
   email: varchar('email', { length: 255 }),
   website: varchar('website', { length: 500 }),
