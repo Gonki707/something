@@ -16,9 +16,7 @@ export default function Home() {
     { to: '/budzet', icon: 'wallet', title: 'Буџет', sub: 'Финансиска транспарентност' },
     { to: '/sluzben-glasnik', icon: 'newspaper', title: 'Службен гласник', sub: 'Сите броеви' },
     { to: '/proekti', icon: 'project', title: 'Проекти', sub: 'Тековни и завршени' },
-    { to: '/vraboteni', icon: 'users', title: 'Вработени', sub: 'Контакти и оддели' },
     { to: '/objavi/Конкурси', icon: 'briefcase', title: 'Конкурси', sub: 'Активни огласи' },
-    { to: '/uplatnici', icon: 'document', title: 'Уплатници', sub: 'Примери и обрасци' },
   ];
 
   return (
