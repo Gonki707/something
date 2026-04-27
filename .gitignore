@@ -2,9 +2,7 @@
 node_modules/
 */node_modules/
 
-# Build outputs
-dist/
-*/dist/
+# Build outputs (kept available for deployment image; safe to leave untracked locally)
 build/
 */build/
 

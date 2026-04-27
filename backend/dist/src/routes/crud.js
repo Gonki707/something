@@ -1,0 +1,689 @@
+import { Router } from 'express';
+import { eq, desc, asc } from 'drizzle-orm';
+import { z } from 'zod';
+import bcrypt from 'bcryptjs';
+import { db } from '../config/db.js';
+import { requireAdmin } from '../middleware/auth.js';
+import { adminUsers, typeObjava, typeLegislativa, typeOfProblems, naseleniMesta, odnosiSoJavnost, sluzbenGlasnik, vraboteni, prijaveniProblemi, budzet, legislativa, proekti, agenda, institucii, kultura, sport, } from '../db/schema.js';
+// ---------- Shared helpers ----------
+const trimmed = z.string().trim();
+const optStr = trimmed.min(1).optional().nullable();
+const optText = z.string().optional().nullable();
+const optInt = z.coerce.number().int().optional().nullable();
+const optDate = z.coerce.date().optional().nullable();
+const optUrl = z
+    .union([z.literal(''), z.string().url()])
+    .optional()
+    .nullable()
+    .transform((v) => (v ? v : v === null ? null : undefined));
+const optEmail = z
+    .union([z.literal(''), z.string().email()])
+    .optional()
+    .nullable()
+    .transform((v) => (v ? v : v === null ? null : undefined));
+const optDocs = z.array(z.string()).optional().nullable();
+const passwordPolicy = z
+    .string()
+    .min(8, 'Лозинката мора да има најмалку 8 знаци')
+    .max(128);
+function dateOnly(d) {
+    if (d === null)
+        return null;
+    if (d === undefined)
+        return undefined;
+    return d.toISOString().slice(0, 10);
+}
+function badId(res) {
+    res.status(400).json({ error: 'Невалиден ID' });
+}
+function notFound(res) {
+    res.status(404).json({ error: 'Не е најдено' });
+}
+function zodFail(res, err) {
+    res.status(400).json({ error: 'Невалидни податоци', details: err.flatten() });
+}
+// Read + delete are fully generic over WithId<T>: no insert-shape coercion needed.
+function readDeleteHandlers(table, order) {
+    const ord = order ?? asc(table.id);
+    const list = async (_req, res, next) => {
+        try {
+            res.json(await db.select().from(table).orderBy(ord));
+        }
+        catch (e) {
+            next(e);
+        }
+    };
+    const getOne = async (req, res, next) => {
+        try {
+            const id = Number(req.params.id);
+            if (!Number.isFinite(id))
+                return badId(res);
+            const [row] = await db.select().from(table).where(eq(table.id, id));
+            if (!row)
+                return notFound(res);
+            res.json(row);
+        }
+        catch (e) {
+            next(e);
+        }
+    };
+    const remove = async (req, res, next) => {
+        try {
+            const id = Number(req.params.id);
+            if (!Number.isFinite(id))
+                return badId(res);
+            const [row] = await db.delete(table).where(eq(table.id, id)).returning();
+            if (!row)
+                return notFound(res);
+            res.json({ ok: true });
+        }
+        catch (e) {
+            next(e);
+        }
+    };
+    return { list, getOne, remove };
+}
+// Wraps a create/update body with parse + DB call. The body receives the
+// validated input and returns either the inserted/updated row or null/undefined
+// for not-found on update.
+function makeCreate(schema, body) {
+    return async (req, res, next) => {
+        const parsed = schema.safeParse(req.body);
+        if (!parsed.success)
+            return zodFail(res, parsed.error);
+        try {
+            const row = await body(parsed.data);
+            if (!row)
+                return notFound(res);
+            res.status(201).json(row);
+        }
+        catch (e) {
+            next(e);
+        }
+    };
+}
+function makeUpdate(schema, body) {
+    return async (req, res, next) => {
+        const id = Number(req.params.id);
+        if (!Number.isFinite(id))
+            return badId(res);
+        const parsed = schema.safeParse(req.body);
+        if (!parsed.success)
+            return zodFail(res, parsed.error);
+        try {
+            const row = await body(id, parsed.data);
+            if (!row)
+                return notFound(res);
+            res.json(row);
+        }
+        catch (e) {
+            next(e);
+        }
+    };
+}
+// ---------- Lookup tables (id + title only) ----------
+const lookupCreate = z.object({ title: trimmed.min(1).max(255) });
+const lookupUpdate = lookupCreate.partial();
+function lookupHandlers(table) {
+    const rd = readDeleteHandlers(table);
+    return {
+        ...rd,
+        create: makeCreate(lookupCreate, async ({ title }) => {
+            const [row] = await db.insert(table).values({ title }).returning();
+            return row;
+        }),
+        update: makeUpdate(lookupUpdate, async (id, data) => {
+            if (data.title === undefined)
+                return undefined;
+            const [row] = await db.update(table).set({ title: data.title }).where(eq(table.id, id)).returning();
+            return row;
+        }),
+    };
+}
+const objavaCreate = z.object({
+    typeId: z.coerce.number().int().optional().nullable(),
+    title: trimmed.min(1).max(500),
+    picture: optText,
+    description: optText,
+    documents: optDocs,
+    dateValidTo: optDate,
+    madeBy: optStr.transform((v) => v ?? undefined),
+});
+const objavaUpdate = objavaCreate.partial();
+function toObjavaInsert(input) {
+    return {
+        typeId: input.typeId ?? null,
+        title: input.title,
+        picture: input.picture ?? null,
+        description: input.description ?? null,
+        documents: input.documents ?? [],
+        dateValidTo: dateOnly(input.dateValidTo) ?? null,
+        madeBy: input.madeBy ?? null,
+    };
+}
+function toObjavaUpdate(input) {
+    const out = {};
+    if (input.typeId !== undefined)
+        out.typeId = input.typeId;
+    if (input.title !== undefined)
+        out.title = input.title;
+    if (input.picture !== undefined)
+        out.picture = input.picture;
+    if (input.description !== undefined)
+        out.description = input.description;
+    if (input.documents !== undefined)
+        out.documents = input.documents;
+    if (input.dateValidTo !== undefined)
+        out.dateValidTo = dateOnly(input.dateValidTo);
+    if (input.madeBy !== undefined)
+        out.madeBy = input.madeBy;
+    return out;
+}
+const glasnikCreate = z.object({
+    broj: trimmed.min(1).max(64),
+    date: optDate,
+    document: optText,
+});
+const glasnikUpdate = glasnikCreate.partial();
+function toGlasnikInsert(i) {
+    return { broj: i.broj, date: dateOnly(i.date) ?? null, document: i.document ?? null };
+}
+function toGlasnikUpdate(i) {
+    const out = {};
+    if (i.broj !== undefined)
+        out.broj = i.broj;
+    if (i.date !== undefined)
+        out.date = dateOnly(i.date);
+    if (i.document !== undefined)
+        out.document = i.document;
+    return out;
+}
+const vrabotenCreate = z.object({
+    firstName: trimmed.min(1).max(128),
+    lastName: trimmed.min(1).max(128),
+    email: optEmail,
+    oddel: optStr,
+    function: optStr,
+});
+const vrabotenUpdate = vrabotenCreate.partial();
+function toVrabotenInsert(i) {
+    return {
+        firstName: i.firstName,
+        lastName: i.lastName,
+        email: i.email ?? null,
+        oddel: i.oddel ?? null,
+        function: i.function ?? null,
+    };
+}
+function toVrabotenUpdate(i) {
+    const out = {};
+    if (i.firstName !== undefined)
+        out.firstName = i.firstName;
+    if (i.lastName !== undefined)
+        out.lastName = i.lastName;
+    if (i.email !== undefined)
+        out.email = i.email;
+    if (i.oddel !== undefined)
+        out.oddel = i.oddel;
+    if (i.function !== undefined)
+        out.function = i.function;
+    return out;
+}
+const problemUpdate = z.object({
+    fullName: optStr,
+    typeOfProblemId: optInt,
+    description: optText,
+    picture: optText,
+    naselenoMestoId: optInt,
+    phoneNumber: optStr,
+    email: optEmail,
+}).partial();
+function toProblemUpdate(i) {
+    const out = {};
+    if (i.fullName !== undefined && i.fullName !== null)
+        out.fullName = i.fullName;
+    if (i.typeOfProblemId !== undefined)
+        out.typeOfProblemId = i.typeOfProblemId;
+    if (i.description !== undefined && i.description !== null)
+        out.description = i.description;
+    if (i.picture !== undefined)
+        out.picture = i.picture;
+    if (i.naselenoMestoId !== undefined)
+        out.naselenoMestoId = i.naselenoMestoId;
+    if (i.phoneNumber !== undefined)
+        out.phoneNumber = i.phoneNumber;
+    if (i.email !== undefined)
+        out.email = i.email;
+    return out;
+}
+const budzetCreate = z.object({
+    forYear: z.coerce.number().int().min(1900).max(3000),
+    date: optDate,
+    documents: optDocs,
+});
+const budzetUpdate = budzetCreate.partial();
+function toBudzetInsert(i) {
+    return { forYear: i.forYear, date: dateOnly(i.date) ?? null, documents: i.documents ?? [] };
+}
+function toBudzetUpdate(i) {
+    const out = {};
+    if (i.forYear !== undefined)
+        out.forYear = i.forYear;
+    if (i.date !== undefined)
+        out.date = dateOnly(i.date);
+    if (i.documents !== undefined)
+        out.documents = i.documents;
+    return out;
+}
+const legislativaCreate = z.object({
+    typeId: z.coerce.number().int().optional().nullable(),
+    title: optStr,
+    document: optText,
+});
+const legislativaUpdate = legislativaCreate.partial();
+function toLegislativaInsert(i) {
+    return { typeId: i.typeId ?? null, title: i.title ?? null, document: i.document ?? null };
+}
+function toLegislativaUpdate(i) {
+    const out = {};
+    if (i.typeId !== undefined)
+        out.typeId = i.typeId;
+    if (i.title !== undefined)
+        out.title = i.title;
+    if (i.document !== undefined)
+        out.document = i.document;
+    return out;
+}
+const proektCreate = z.object({
+    title: trimmed.min(1).max(500),
+    description: optText,
+    picture: optText,
+    documents: optDocs,
+});
+const proektUpdate = proektCreate.partial();
+function toProektInsert(i) {
+    return {
+        title: i.title,
+        description: i.description ?? null,
+        picture: i.picture ?? null,
+        documents: i.documents ?? [],
+    };
+}
+function toProektUpdate(i) {
+    const out = {};
+    if (i.title !== undefined)
+        out.title = i.title;
+    if (i.description !== undefined)
+        out.description = i.description;
+    if (i.picture !== undefined)
+        out.picture = i.picture;
+    if (i.documents !== undefined)
+        out.documents = i.documents;
+    return out;
+}
+const agendaCreate = z.object({
+    dateTime: z.coerce.date(),
+    title: trimmed.min(1).max(500),
+    description: optText,
+});
+const agendaUpdate = agendaCreate.partial();
+function toAgendaInsert(i) {
+    return { dateTime: i.dateTime, title: i.title, description: i.description ?? null };
+}
+function toAgendaUpdate(i) {
+    const out = {};
+    if (i.dateTime !== undefined)
+        out.dateTime = i.dateTime;
+    if (i.title !== undefined)
+        out.title = i.title;
+    if (i.description !== undefined)
+        out.description = i.description;
+    return out;
+}
+const institucijaCreate = z.object({
+    nameOfInstitution: trimmed.min(1).max(500),
+    mestoNaseleno: optStr,
+    directorFullName: optStr,
+    directorPicture: optStr,
+    directorBiography: optText,
+    email: optEmail,
+    website: optUrl,
+    facebook: optUrl,
+    instagram: optUrl,
+});
+const institucijaUpdate = institucijaCreate.partial();
+function toInstitucijaInsert(i) {
+    return {
+        nameOfInstitution: i.nameOfInstitution,
+        mestoNaseleno: i.mestoNaseleno ?? null,
+        directorFullName: i.directorFullName ?? null,
+        directorPicture: i.directorPicture ?? null,
+        directorBiography: i.directorBiography ?? null,
+        email: i.email ?? null,
+        website: i.website ?? null,
+        facebook: i.facebook ?? null,
+        instagram: i.instagram ?? null,
+    };
+}
+function toInstitucijaUpdate(i) {
+    const out = {};
+    if (i.nameOfInstitution !== undefined)
+        out.nameOfInstitution = i.nameOfInstitution;
+    if (i.mestoNaseleno !== undefined)
+        out.mestoNaseleno = i.mestoNaseleno;
+    if (i.directorFullName !== undefined)
+        out.directorFullName = i.directorFullName;
+    if (i.directorPicture !== undefined)
+        out.directorPicture = i.directorPicture;
+    if (i.directorBiography !== undefined)
+        out.directorBiography = i.directorBiography;
+    if (i.email !== undefined)
+        out.email = i.email;
+    if (i.website !== undefined)
+        out.website = i.website;
+    if (i.facebook !== undefined)
+        out.facebook = i.facebook;
+    if (i.instagram !== undefined)
+        out.instagram = i.instagram;
+    return out;
+}
+const kulturaCreate = z.object({
+    title: trimmed.min(1).max(500),
+    picture: optText,
+    description: optText,
+    date: optDate,
+    images: optDocs,
+});
+const kulturaUpdate = kulturaCreate.partial();
+function toKulturaInsert(i) {
+    return {
+        title: i.title,
+        picture: i.picture ?? null,
+        description: i.description ?? null,
+        date: dateOnly(i.date) ?? null,
+        images: i.images ?? [],
+    };
+}
+function toKulturaUpdate(i) {
+    const out = {};
+    if (i.title !== undefined)
+        out.title = i.title;
+    if (i.picture !== undefined)
+        out.picture = i.picture;
+    if (i.description !== undefined)
+        out.description = i.description;
+    if (i.date !== undefined)
+        out.date = dateOnly(i.date);
+    if (i.images !== undefined)
+        out.images = i.images;
+    return out;
+}
+const sportCreate = z.object({
+    title: trimmed.min(1).max(500),
+    picture: optText,
+    description: optText,
+    date: optDate,
+    images: optDocs,
+});
+const sportUpdate = sportCreate.partial();
+function toSportInsert(i) {
+    return {
+        title: i.title,
+        picture: i.picture ?? null,
+        description: i.description ?? null,
+        date: dateOnly(i.date) ?? null,
+        images: i.images ?? [],
+    };
+}
+function toSportUpdate(i) {
+    const out = {};
+    if (i.title !== undefined)
+        out.title = i.title;
+    if (i.picture !== undefined)
+        out.picture = i.picture;
+    if (i.description !== undefined)
+        out.description = i.description;
+    if (i.date !== undefined)
+        out.date = dateOnly(i.date);
+    if (i.images !== undefined)
+        out.images = i.images;
+    return out;
+}
+const adminUserCreate = z.object({
+    email: trimmed.toLowerCase().email(),
+    name: trimmed.min(1).max(255),
+    role: trimmed.max(32).optional(),
+    password: passwordPolicy,
+});
+const adminUserUpdate = z.object({
+    email: trimmed.toLowerCase().email().optional(),
+    name: trimmed.min(1).max(255).optional(),
+    role: trimmed.max(32).optional(),
+    password: passwordPolicy.optional(),
+});
+const adminUserPublicCols = {
+    id: adminUsers.id,
+    email: adminUsers.email,
+    name: adminUsers.name,
+    role: adminUsers.role,
+    createdAt: adminUsers.createdAt,
+};
+async function toAdminUserInsert(i) {
+    return {
+        email: i.email,
+        name: i.name,
+        role: i.role ?? 'admin',
+        passwordHash: await bcrypt.hash(i.password, 10),
+    };
+}
+async function toAdminUserUpdate(i) {
+    const out = {};
+    if (i.email !== undefined)
+        out.email = i.email;
+    if (i.name !== undefined)
+        out.name = i.name;
+    if (i.role !== undefined)
+        out.role = i.role;
+    if (i.password !== undefined)
+        out.passwordHash = await bcrypt.hash(i.password, 10);
+    return out;
+}
+// ---------- Build the entity registry ----------
+function entityHandlers(table, rd, create, update) {
+    void table;
+    return { ...rd, create, update };
+}
+const objavaRD = readDeleteHandlers(odnosiSoJavnost, desc(odnosiSoJavnost.createdAt));
+const glasnikRD = readDeleteHandlers(sluzbenGlasnik, desc(sluzbenGlasnik.date));
+const vrabotenRD = readDeleteHandlers(vraboteni);
+const problemRD = readDeleteHandlers(prijaveniProblemi, desc(prijaveniProblemi.date));
+const budzetRD = readDeleteHandlers(budzet, desc(budzet.forYear));
+const legislativaRD = readDeleteHandlers(legislativa);
+const proektiRD = readDeleteHandlers(proekti);
+const agendaRD = readDeleteHandlers(agenda, asc(agenda.dateTime));
+const institucijaRD = readDeleteHandlers(institucii);
+const kulturaRD = readDeleteHandlers(kultura, desc(kultura.createdAt));
+const sportRD = readDeleteHandlers(sport, desc(sport.createdAt));
+// adminUsers — replace the generic read handlers with ones that strip passwordHash
+// from responses by selecting a public-only column projection.
+const adminUserRD = (() => {
+    const baseRemove = readDeleteHandlers(adminUsers).remove;
+    const list = async (_req, res, next) => {
+        try {
+            res.json(await db.select(adminUserPublicCols).from(adminUsers).orderBy(asc(adminUsers.id)));
+        }
+        catch (e) {
+            next(e);
+        }
+    };
+    const getOne = async (req, res, next) => {
+        try {
+            const id = Number(req.params.id);
+            if (!Number.isFinite(id))
+                return badId(res);
+            const [row] = await db.select(adminUserPublicCols).from(adminUsers).where(eq(adminUsers.id, id));
+            if (!row)
+                return notFound(res);
+            res.json(row);
+        }
+        catch (e) {
+            next(e);
+        }
+    };
+    return { list, getOne, remove: baseRemove };
+})();
+const entities = {
+    'type-objava': lookupHandlers(typeObjava),
+    'type-legislativa': lookupHandlers(typeLegislativa),
+    'type-of-problems': lookupHandlers(typeOfProblems),
+    'naseleni-mesta': lookupHandlers(naseleniMesta),
+    'odnosi-so-javnost': entityHandlers(odnosiSoJavnost, objavaRD, makeCreate(objavaCreate, async (data) => {
+        const [row] = await db.insert(odnosiSoJavnost).values(toObjavaInsert(data)).returning();
+        return row;
+    }), makeUpdate(objavaUpdate, async (id, data) => {
+        const set = toObjavaUpdate(data);
+        if (Object.keys(set).length === 0)
+            return undefined;
+        const [row] = await db.update(odnosiSoJavnost).set(set).where(eq(odnosiSoJavnost.id, id)).returning();
+        return row;
+    })),
+    'sluzben-glasnik': entityHandlers(sluzbenGlasnik, glasnikRD, makeCreate(glasnikCreate, async (data) => {
+        const [row] = await db.insert(sluzbenGlasnik).values(toGlasnikInsert(data)).returning();
+        return row;
+    }), makeUpdate(glasnikUpdate, async (id, data) => {
+        const set = toGlasnikUpdate(data);
+        if (Object.keys(set).length === 0)
+            return undefined;
+        const [row] = await db.update(sluzbenGlasnik).set(set).where(eq(sluzbenGlasnik.id, id)).returning();
+        return row;
+    })),
+    'vraboteni': entityHandlers(vraboteni, vrabotenRD, makeCreate(vrabotenCreate, async (data) => {
+        const [row] = await db.insert(vraboteni).values(toVrabotenInsert(data)).returning();
+        return row;
+    }), makeUpdate(vrabotenUpdate, async (id, data) => {
+        const set = toVrabotenUpdate(data);
+        if (Object.keys(set).length === 0)
+            return undefined;
+        const [row] = await db.update(vraboteni).set(set).where(eq(vraboteni.id, id)).returning();
+        return row;
+    })),
+    // No create handler — problems are submitted via POST /api/problems only.
+    'prijaveni-problemi': {
+        ...problemRD,
+        update: makeUpdate(problemUpdate, async (id, data) => {
+            const set = toProblemUpdate(data);
+            if (Object.keys(set).length === 0)
+                return undefined;
+            const [row] = await db.update(prijaveniProblemi).set(set).where(eq(prijaveniProblemi.id, id)).returning();
+            return row;
+        }),
+    },
+    'budzet': entityHandlers(budzet, budzetRD, makeCreate(budzetCreate, async (data) => {
+        const [row] = await db.insert(budzet).values(toBudzetInsert(data)).returning();
+        return row;
+    }), makeUpdate(budzetUpdate, async (id, data) => {
+        const set = toBudzetUpdate(data);
+        if (Object.keys(set).length === 0)
+            return undefined;
+        const [row] = await db.update(budzet).set(set).where(eq(budzet.id, id)).returning();
+        return row;
+    })),
+    'legislativa': entityHandlers(legislativa, legislativaRD, makeCreate(legislativaCreate, async (data) => {
+        const [row] = await db.insert(legislativa).values(toLegislativaInsert(data)).returning();
+        return row;
+    }), makeUpdate(legislativaUpdate, async (id, data) => {
+        const set = toLegislativaUpdate(data);
+        if (Object.keys(set).length === 0)
+            return undefined;
+        const [row] = await db.update(legislativa).set(set).where(eq(legislativa.id, id)).returning();
+        return row;
+    })),
+    'proekti': entityHandlers(proekti, proektiRD, makeCreate(proektCreate, async (data) => {
+        const [row] = await db.insert(proekti).values(toProektInsert(data)).returning();
+        return row;
+    }), makeUpdate(proektUpdate, async (id, data) => {
+        const set = toProektUpdate(data);
+        if (Object.keys(set).length === 0)
+            return undefined;
+        const [row] = await db.update(proekti).set(set).where(eq(proekti.id, id)).returning();
+        return row;
+    })),
+    'agenda': entityHandlers(agenda, agendaRD, makeCreate(agendaCreate, async (data) => {
+        const [row] = await db.insert(agenda).values(toAgendaInsert(data)).returning();
+        return row;
+    }), makeUpdate(agendaUpdate, async (id, data) => {
+        const set = toAgendaUpdate(data);
+        if (Object.keys(set).length === 0)
+            return undefined;
+        const [row] = await db.update(agenda).set(set).where(eq(agenda.id, id)).returning();
+        return row;
+    })),
+    'institucii': entityHandlers(institucii, institucijaRD, makeCreate(institucijaCreate, async (data) => {
+        const [row] = await db.insert(institucii).values(toInstitucijaInsert(data)).returning();
+        return row;
+    }), makeUpdate(institucijaUpdate, async (id, data) => {
+        const set = toInstitucijaUpdate(data);
+        if (Object.keys(set).length === 0)
+            return undefined;
+        const [row] = await db.update(institucii).set(set).where(eq(institucii.id, id)).returning();
+        return row;
+    })),
+    'kultura': entityHandlers(kultura, kulturaRD, makeCreate(kulturaCreate, async (data) => {
+        const [row] = await db.insert(kultura).values(toKulturaInsert(data)).returning();
+        return row;
+    }), makeUpdate(kulturaUpdate, async (id, data) => {
+        const set = toKulturaUpdate(data);
+        if (Object.keys(set).length === 0)
+            return undefined;
+        const [row] = await db.update(kultura).set(set).where(eq(kultura.id, id)).returning();
+        return row;
+    })),
+    'sport': entityHandlers(sport, sportRD, makeCreate(sportCreate, async (data) => {
+        const [row] = await db.insert(sport).values(toSportInsert(data)).returning();
+        return row;
+    }), makeUpdate(sportUpdate, async (id, data) => {
+        const set = toSportUpdate(data);
+        if (Object.keys(set).length === 0)
+            return undefined;
+        const [row] = await db.update(sport).set(set).where(eq(sport.id, id)).returning();
+        return row;
+    })),
+    'admin-users': {
+        ...adminUserRD,
+        create: makeCreate(adminUserCreate, async (data) => {
+            const values = await toAdminUserInsert(data);
+            const [row] = await db.insert(adminUsers).values(values).returning(adminUserPublicCols);
+            return row;
+        }),
+        update: makeUpdate(adminUserUpdate, async (id, data) => {
+            const set = await toAdminUserUpdate(data);
+            if (Object.keys(set).length === 0)
+                return undefined;
+            const [row] = await db.update(adminUsers).set(set).where(eq(adminUsers.id, id)).returning(adminUserPublicCols);
+            return row;
+        }),
+    },
+};
+const PUBLIC_READ = [
+    'type-objava', 'type-legislativa', 'type-of-problems', 'naseleni-mesta',
+    'odnosi-so-javnost', 'sluzben-glasnik', 'vraboteni', 'budzet',
+    'legislativa', 'proekti', 'agenda', 'institucii',
+    'kultura', 'sport',
+];
+export const publicRouter = Router();
+for (const key of PUBLIC_READ) {
+    const h = entities[key];
+    publicRouter.get(`/${key}`, h.list);
+    publicRouter.get(`/${key}/:id`, h.getOne);
+}
+export const adminRouter = Router();
+adminRouter.use(requireAdmin);
+for (const [key, h] of Object.entries(entities)) {
+    adminRouter.get(`/${key}`, h.list);
+    adminRouter.get(`/${key}/:id`, h.getOne);
+    if (h.create)
+        adminRouter.post(`/${key}`, h.create);
+    adminRouter.put(`/${key}/:id`, h.update);
+    adminRouter.delete(`/${key}/:id`, h.remove);
+}
+export const entityNames = Object.keys(entities);
