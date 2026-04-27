@@ -1,5 +1,26 @@
 export interface LookupRow { id: number; title: string }
 
+export interface BiographySection {
+  heading: string;
+  items: string[];
+}
+
+export interface GradonacalnikData {
+  name: string;
+  title: string;
+  image: string;
+  homePreview: string;
+  biography: BiographySection[];
+  responsibilities: {
+    heading: string;
+    text: string;
+  };
+  contact: {
+    heading: string;
+    items: Array<{ label: string; value: string }>;
+  };
+}
+
 export interface ObjavaRow {
   id: number;
   typeId: number | null;
@@ -40,6 +61,7 @@ export interface LegislativaRow {
   typeId: number | null;
   title: string | null;
   document: string | null;
+  date: string | null;
 }
 
 export interface ProektRow {
@@ -57,15 +79,28 @@ export interface InstitucijaRow {
   directorFullName: string | null;
   directorPicture: string | null;
   directorBiography: string | null;
-  email: string | null;
-  website: string | null;
-  facebook: string | null;
-  instagram: string | null;
+  email?: string | null;
+  website?: string | null;
+  facebook?: string | null;
+  instagram?: string | null;
 }
 
-export interface AgendaRow {
+export interface KulturaRow {
   id: number;
-  dateTime: string;
   title: string;
+  picture: string | null;
   description: string | null;
+  date: string | null;
+  images: string[] | null;
+  createdAt: string;
+}
+
+export interface SportRow {
+  id: number;
+  title: string;
+  picture: string | null;
+  description: string | null;
+  date: string | null;
+  images: string[] | null;
+  createdAt: string;
 }

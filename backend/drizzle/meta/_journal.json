@@ -8,6 +8,13 @@
       "when": 1776794079857,
       "tag": "0000_strong_odin",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777102985569,
+      "tag": "0001_slippery_jack_murdock",
+      "breakpoints": true
     }
   ]
 }

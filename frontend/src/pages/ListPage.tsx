@@ -88,25 +88,40 @@ export function ObjavaDetail() {
 
 export function SluzbenGlasnikPage() {
   const { data, loading } = useFetch<GlasnikRow[]>(() => publicGet('sluzben-glasnik'));
+  
+  const groupedByYear = (data || [])
+    .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime())
+    .reduce((acc, item) => {
+      const year = item.date ? new Date(item.date).getFullYear() : 'Непозната година';
+      if (!acc[year]) acc[year] = [];
+      acc[year].push(item);
+      return acc;
+    }, {} as Record<string | number, GlasnikRow[]>);
+  
+  const sortedYears = Object.keys(groupedByYear).sort((a, b) => Number(b) - Number(a));
+
   return (
     <div className="page">
       <div className="container">
         <div className="page-header"><div className="crumb">Односи со јавност</div><h1>Службен гласник</h1></div>
         {loading ? <span className="spinner" /> : (
-          <div className="table-wrap">
-            <table className="data">
-              <thead><tr><th>Број</th><th>Датум</th><th>Документ</th></tr></thead>
-              <tbody>
-                {(data || []).map((g) => (
-                  <tr key={g.id}>
-                    <td><Link to={`/sluzben-glasnik/${g.id}`}>{g.broj}</Link></td>
-                    <td>{fmtDate(g.date) || '-'}</td>
-                    <td>{g.document ? <a href={g.document} target="_blank" rel="noreferrer">📄 Преземи</a> : '-'}</td>
-                  </tr>
-                ))}
-                {!data?.length && <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--muted)' }}>Нема внесени броеви.</td></tr>}
-              </tbody>
-            </table>
+          <div className="doc-list-yearly">
+            {sortedYears.map((year) => (
+              <div key={year} className="year-section">
+                <h2 className="year-heading">{year}</h2>
+                <div className="doc-items">
+                  {groupedByYear[year].map((g) => (
+                    <div key={g.id} className="doc-item">
+                      <a href={g.document ?? undefined} target="_blank" rel="noreferrer" className="doc-link">
+                        📄 {g.broj ? `Број ${g.broj}` : 'Документ'}
+                      </a>
+                      <span className="doc-date">{fmtDate(g.date)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {!data?.length && <div className="empty">Нема внесени броеви.</div>}
           </div>
         )}
       </div>
@@ -270,25 +285,39 @@ export function LegislativaPage() {
   const typeMap = Object.fromEntries((types || []).map((t) => [t.id, t.title]));
   const filtered = (data || []).filter((l) => !type || (l.typeId != null && typeMap[l.typeId] === type));
 
+  const groupedByYear = filtered
+    .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime())
+    .reduce((acc, item) => {
+      const year = item.date ? new Date(item.date).getFullYear() : 'Непозната година';
+      if (!acc[year]) acc[year] = [];
+      acc[year].push(item);
+      return acc;
+    }, {} as Record<string | number, LegislativaRow[]>);
+  
+  const sortedYears = Object.keys(groupedByYear).sort((a, b) => Number(b) - Number(a));
+
   return (
     <div className="page">
       <div className="container">
         <div className="page-header"><div className="crumb">Легислатива</div><h1>{type || 'Документи'}</h1></div>
         {loading ? <span className="spinner" /> : (
-          <div className="table-wrap">
-            <table className="data">
-              <thead><tr><th>Тип</th><th>Наслов</th><th>Документ</th></tr></thead>
-              <tbody>
-                {filtered.map((l) => (
-                  <tr key={l.id}>
-                    <td>{l.typeId != null ? typeMap[l.typeId] : ''}</td>
-                    <td><Link to={`/legislativa-detalji/${l.id}`}>{l.title || 'Документ'}</Link></td>
-                    <td>{l.document ? <a href={l.document} target="_blank" rel="noreferrer">📄 Преземи</a> : '-'}</td>
-                  </tr>
-                ))}
-                {!filtered.length && <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--muted)' }}>Нема документи.</td></tr>}
-              </tbody>
-            </table>
+          <div className="doc-list-yearly">
+            {sortedYears.map((year) => (
+              <div key={year} className="year-section">
+                <h2 className="year-heading">{year}</h2>
+                <div className="doc-items">
+                  {groupedByYear[year].map((l) => (
+                    <div key={l.id} className="doc-item">
+                      <a href={l.document ?? undefined} target="_blank" rel="noreferrer" className="doc-link">
+                        📄 {l.title || 'Документ'}
+                      </a>
+                      <span className="doc-date">{fmtDate(l.date)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {!filtered.length && <div className="empty">Нема документи.</div>}
           </div>
         )}
       </div>
@@ -317,8 +346,8 @@ export function InstitucionDetail() {
                 <div className="director-block">
                   <img
                     className="director-photo"
-                    src={inst.directorPicture && inst.directorPicture.trim() ? inst.directorPicture : 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?auto=format&fit=crop&w=600&q=80'}
-                    alt={inst.directorFullName}
+                    src={(inst.directorPicture?.trim() ? inst.directorPicture : undefined) ?? 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?auto=format&fit=crop&w=600&q=80'}
+                    alt={inst.directorFullName ?? ''}
                     loading="lazy"
                   />
                   <div>
@@ -396,7 +425,7 @@ export function LegislativaDetail() {
         {l ? (
           <>
             <div className="page-header"><div className="crumb">Легислатива · {typeName || ''}</div><h1>{l.title || 'Документ'}</h1></div>
-            {l.document && <p><a href={l.document} target="_blank" rel="noreferrer" className="btn primary">📄 Преземи документ</a></p>}
+            {l.document && <p><a href={l.document ?? undefined} target="_blank" rel="noreferrer" className="btn primary">📄 Преземи документ</a></p>}
           </>
         ) : <span className="spinner" />}
       </div>

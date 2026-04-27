@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import UsefulLinksSlider from '../components/UsefulLinksSlider';
 import FloatingReportButton from '../components/FloatingReportButton';
 
 export default function PublicLayout() {
@@ -10,6 +11,7 @@ export default function PublicLayout() {
       <main>
         <Outlet />
       </main>
+      <UsefulLinksSlider />
       <Footer />
       <FloatingReportButton />
     </>

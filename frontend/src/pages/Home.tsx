@@ -4,6 +4,7 @@ import { publicGet } from '../api/entities';
 import Calendar from '../components/Calendar';
 import Icon from '../components/Icon';
 import { DEFAULT_PHOTO, DEFAULT_PORTRAIT, photoOrDefault } from '../lib/defaults';
+import type { GradonacalnikData } from '../types/entities';
 
 interface Objava { id: number; typeId: number; title: string; description: string | null; picture: string | null; createdAt: string; }
 interface Agenda { id: number; dateTime: string; title: string; description: string | null; }
@@ -15,9 +16,13 @@ export default function Home() {
   // typeId 1 = Новости, 2 = Соопштенија (per /api/public/type-objava)
   const news = (objavi || []).filter((o) => o.typeId === 1).slice(0, 3);
   const announcements = (objavi || []).filter((o) => o.typeId === 2).slice(0, 3);
+  const { data: mayor } = useFetch<GradonacalnikData>(
+    () => fetch('/data/gradonacalnik.json').then((r) => r.json()),
+    []
+  );
 
   const quickLinks: Array<{ to: string; icon: Parameters<typeof Icon>[0]['name']; title: string; sub: string }> = [
-    { to: '/budzet', icon: 'wallet', title: 'Буџет', sub: 'Финансиска транспарентност' },
+    { to: '/prijavi-problem', icon: 'alert', title: 'Пријави проблем', sub: 'Пријавете проблем или предлог' },
     { to: '/sluzben-glasnik', icon: 'newspaper', title: 'Службен гласник', sub: 'Сите броеви' },
     { to: '/proekti', icon: 'project', title: 'Проекти', sub: 'Тековни и завршени' },
     { to: '/objavi/Конкурси', icon: 'briefcase', title: 'Конкурси', sub: 'Активни огласи' },
@@ -98,61 +103,64 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="block">
-        <div className="container">
-          <div className="section-title">
-            <h2>Градоначалник</h2>
-            <Link to="/gradonacalnik" className="link-with-icon">
-              <span>Целосна биографија</span>
-              <Icon name="arrow-right" size={16} />
-            </Link>
-          </div>
-          <div className="mayor-card">
-            <div className="mayor-photo">
-              <img src={DEFAULT_PORTRAIT} alt="Портрет на градоначалникот" loading="lazy" />
+      {mayor && (
+        <section className="block">
+          <div className="container">
+            <div className="section-title">
+              <h2>Градоначалник</h2>
+              <Link to="/gradonacalnik" className="link-with-icon">
+                <span>Целосна биографија</span>
+                <Icon name="arrow-right" size={16} />
+              </Link>
             </div>
-            <div className="mayor-body">
-              <span className="tag">Кабинет на градоначалник</span>
-              <h3 className="mayor-name">Медат Куртоски</h3>
-              <p className="mayor-role">Градоначалник на Општина Маврово и Ростуше</p>
-              <p className="mayor-bio">Медат Куртоски е роден во селото Жировница. Завршил високо образование на Економскиот факултет при Универзитетот „Св. Кирил и Методиј“ во Скопје. Пред да биде избран за градоначалник, работел како раководител во областа на локалниот економски развој и бил активен во невладиниот сектор за заштита на природното наследство на Мавровскиот регион.</p>
-              <div className="mayor-meta">
-                <div className="mayor-meta-item">
-                  <span className="mayor-meta-icon"><Icon name="mail" size={16} /></span>
-                  <div>
-                    <small>Е-пошта</small>
-                    <strong>gradonacalnik@mavrovoirostuse.gov.mk</strong>
-                  </div>
+            <div className="mayor-card">
+              <div className="mayor-photo">
+                <img src={mayor.image || DEFAULT_PORTRAIT} alt={`Портрет на ${mayor.name}`} loading="lazy" />
+              </div>
+              <div className="mayor-body">
+                <span className="tag">Кабинет на градоначалник</span>
+                <h3 className="mayor-name">{mayor.name}</h3>
+                <p className="mayor-role">{mayor.title}</p>
+                <p className="mayor-bio">{mayor.homePreview}</p>
+                <div className="mayor-meta">
+                  {mayor.contact.items.map((item) => (
+                    <div key={item.label} className="mayor-meta-item">
+                      <span className="mayor-meta-icon">
+                        <Icon
+                          name={
+                            item.label === 'Е-пошта'
+                              ? 'mail'
+                              : item.label === 'Телефон'
+                              ? 'phone'
+                              : item.label === 'Адреса'
+                              ? 'pin'
+                              : 'calendar'
+                          }
+                          size={16}
+                        />
+                      </span>
+                      <div>
+                        <small>{item.label}</small>
+                        <strong>{item.value}</strong>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="mayor-meta-item">
-                  <span className="mayor-meta-icon"><Icon name="phone" size={16} /></span>
-                  <div>
-                    <small>Телефон</small>
-                    <strong>+389 (0)42 478 814</strong>
-                  </div>
-                </div>
-                <div className="mayor-meta-item">
-                  <span className="mayor-meta-icon"><Icon name="calendar" size={16} /></span>
-                  <div>
-                    <small>Прием на граѓани</small>
-                    <strong>секој вторник 10:00 – 13:00 ч.</strong>
-                  </div>
+                <div className="mayor-actions">
+                  <Link to="/gradonacalnik" className="btn primary">
+                    <Icon name="briefcase" size={16} />
+                    <span>Биографија и надлежности</span>
+                  </Link>
+                  <Link to="/sovet-na-opstinata" className="btn outline">
+                    <Icon name="users" size={16} />
+                    <span>Совет на општината</span>
+                  </Link>
                 </div>
               </div>
-              <div className="mayor-actions">
-                <Link to="/gradonacalnik" className="btn primary">
-                  <Icon name="briefcase" size={16} />
-                  <span>Биографија и надлежности</span>
-                </Link>
-                <Link to="/sovet-na-opstinata" className="btn outline">
-                  <Icon name="users" size={16} />
-                  <span>Совет на општината</span>
-                </Link>
-              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       <section className="block" style={{ background: '#fff' }}>
         <div className="container">

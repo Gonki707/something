@@ -8,40 +8,81 @@ interface Institucija { id: number; nameOfInstitution: string; }
 
 export default function Header() {
   const [open, setOpen] = useState<string | null>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const { data: institucii } = useFetch<Institucija[]>(() => publicGet<Institucija>('institucii'));
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(null);
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(null);
+        setMobileOpen(false);
+      }
     };
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
 
+  // Close mobile menu on Escape key
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(null);
+        setMobileOpen(false);
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileOpen]);
+
   const toggle = (name: string) => setOpen((o) => (o === name ? null : name));
-  const close = () => setOpen(null);
+  const close = () => { setOpen(null); setMobileOpen(false); };
 
   return (
     <header className="site-header">
       <div className="header-top">
         <div className="container">
-          <span>Општина Маврово и Ростуше · info@mavrovo.gov.mk · +389 42 478 814</span>
-          <MayorMeetingButton />
+          <span className="header-top-text">Општина Маврово и Ростуше · info@mavrovo.gov.mk · +389 42 478 814</span>
+          <div className="header-top-right"><MayorMeetingButton /></div>
         </div>
       </div>
+      {mobileOpen && (
+        <div className="mobile-overlay" onClick={close} aria-hidden="true" />
+      )}
       <div className="container header-main" ref={ref}>
         <Link to="/" className="brand" onClick={close}>
-          <div className="brand-mark">МР</div>
+          <img src="/Logo/Logo.png" alt="Општина Маврово и Ростуше" className="brand-logo" />
           <div className="brand-text">
             <strong>Општина Маврово и Ростуше</strong>
             <small>Официјална веб страница</small>
           </div>
         </Link>
 
-        <nav className="nav">
+        <button
+          type="button"
+          className={`mobile-menu-btn ${mobileOpen ? 'is-open' : ''}`}
+          onClick={() => setMobileOpen((v) => !v)}
+          aria-label={mobileOpen ? 'Затвори мени' : 'Отвори мени'}
+          aria-expanded={mobileOpen}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+
+        <nav className={`nav ${mobileOpen ? 'is-mobile-open' : ''}`}>
           <div className="nav-item">
-            <button className={`nav-link ${open === 'zapoznaj' ? 'is-open' : ''}`} onClick={() => toggle('zapoznaj')}>
+            <button type="button" className={`nav-link ${open === 'zapoznaj' ? 'is-open' : ''}`} onClick={() => toggle('zapoznaj')}>
               <span>Запознај ја општината</span>
               <span className="chev">▾</span>
             </button>
@@ -51,13 +92,15 @@ export default function Header() {
                   <Link to="/mestopolozba" onClick={close}>Местоположба</Link>
                   <Link to="/naseleni-mesta" onClick={close}>Населени места</Link>
                   <Link to="/prirodni-bogatstva" onClick={close}>Природни богатства</Link>
+                  <Link to="/kultura" onClick={close}>Култура</Link>
+                  <Link to="/sport" onClick={close}>Спорт</Link>
                 </div>
               </div>
             )}
           </div>
 
           <div className="nav-item">
-            <button className={`nav-link ${open === 'meni' ? 'is-open' : ''}`} onClick={() => toggle('meni')}>
+            <button type="button" className={`nav-link ${open === 'meni' ? 'is-open' : ''}`} onClick={() => toggle('meni')}>
               <span>Мени</span>
               <span className="chev">▾</span>
             </button>
@@ -109,7 +152,6 @@ export default function Header() {
               </div>
             )}
           </div>
-
         </nav>
       </div>
     </header>

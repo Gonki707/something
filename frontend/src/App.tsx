@@ -1,8 +1,14 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import ScrollToTop from './components/ScrollToTop';
 import PublicLayout from './layouts/PublicLayout';
 import AdminLayout from './layouts/AdminLayout';
 import Home from './pages/Home';
 import ReportProblem from './pages/ReportProblem';
+import GradonacalnikPage from './pages/GradonacalnikPage';
+import CulturePage from './pages/CulturePage';
+import CultureDetail from './pages/CultureDetail';
+import SportPage from './pages/SportPage';
+import SportDetail from './pages/SportDetail';
 import {
   ObjaviList, ObjavaDetail, SluzbenGlasnikPage, GlasnikDetail,
   VraboteniPage, VrabotenDetail,
@@ -17,7 +23,9 @@ import CrudEdit from './pages/admin/CrudEdit';
 
 export default function App() {
   return (
-    <Routes>
+    <>
+      <ScrollToTop />
+      <Routes>
       <Route element={<PublicLayout />}>
         <Route index element={<Home />} />
         <Route path="objavi/:type" element={<ObjaviList />} />
@@ -56,6 +64,11 @@ export default function App() {
             <p>Општината е поврзана со регионалниот пат <strong>Р1202</strong> (Гостивар – Дебар), кој минува долж кањонот на реката Радика. Најблискиот аеродром е „Меѓународен аеродром Скопје“, оддалечен околу 130 km од Маврови Анови.</p>
           </StaticPage>
         } />
+        <Route path="kultura" element={<CulturePage />} />
+        <Route path="kultura/:id" element={<CultureDetail />} />
+        <Route path="sport" element={<SportPage />} />
+        <Route path="sport/:id" element={<SportDetail />} />
+
         <Route path="prirodni-bogatstva" element={
           <StaticPage title="Природни богатства" crumb="Запознај ја општината">
             <figure>
@@ -80,28 +93,7 @@ export default function App() {
             </ul>
           </StaticPage>
         } />
-        <Route path="gradonacalnik" element={
-          <StaticPage title="Градоначалник" crumb="Локална самоуправа">
-            <div className="bio">
-              <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=600&q=80" alt="Портрет на градоначалникот" loading="lazy" />
-              <div>
-                <h2 style={{ marginTop: 0 }}>Медат Куртоски</h2>
-                <p style={{ color: 'var(--muted)', marginTop: 0 }}>Градоначалник на Општина Маврово и Ростуше</p>
-                <p>Медат Куртоски е роден во селото Жировница. Завршил високо образование на Економскиот факултет при Универзитетот „Св. Кирил и Методиј“ во Скопје. Пред да биде избран за градоначалник, работел како раководител во областа на локалниот економски развој и бил активен во невладиниот сектор за заштита на природното наследство на Мавровскиот регион.</p>
-                <p>На локалните избори е избран за градоначалник на Општина Маврово и Ростуше, со мандат фокусиран на развој на туризмот, инфраструктурата и подигнување на квалитетот на услугите за граѓаните.</p>
-              </div>
-            </div>
-            <h2>Надлежности</h2>
-            <p>Градоначалникот е извршен орган на општината, избран на општи и непосредни избори со мандат од 4 години. Тој ја застапува и претставува општината, го предлага буџетот, ги извршува одлуките на Советот, раководи со општинската администрација и одговара за законитоста на сите акти.</p>
-            <h2>Контакт</h2>
-            <div className="info-grid">
-              <div className="info-card"><strong>Е-пошта</strong><span>gradonacalnik@mavrovoirostuse.gov.mk</span></div>
-              <div className="info-card"><strong>Телефон</strong><span>+389 (0)42 478 814</span></div>
-              <div className="info-card"><strong>Адреса</strong><span>с. Ростуше бб, 1254</span></div>
-              <div className="info-card"><strong>Прием на граѓани</strong><span>секој вторник 10:00 – 13:00 ч.</span></div>
-            </div>
-          </StaticPage>
-        } />
+        <Route path="gradonacalnik" element={<GradonacalnikPage />} />
         <Route path="sovet-na-opstinata" element={
           <StaticPage title="Совет на општината" crumb="Локална самоуправа">
             <p>Советот на општината е претставнички орган на граѓаните и одлучува во рамките на надлежностите утврдени со закон. Согласно Законот за локалната самоуправа, Советот на Општина Маврово и Ростуше брои <strong>11 советници</strong>, избрани на општи избори со мандат од 4 години.</p>
@@ -173,5 +165,6 @@ export default function App() {
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   );
 }

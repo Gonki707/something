@@ -122,6 +122,26 @@ export const institucii = pgTable('institucii', {
   instagram: varchar('instagram', { length: 500 }),
 });
 
+export const kultura = pgTable('kultura', {
+  id: serial('id').primaryKey(),
+  title: varchar('title', { length: 500 }).notNull(),
+  picture: text('picture'),
+  description: text('description'),
+  date: date('date'),
+  images: jsonb('images').$type<string[]>().default([]),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const sport = pgTable('sport', {
+  id: serial('id').primaryKey(),
+  title: varchar('title', { length: 500 }).notNull(),
+  picture: text('picture'),
+  description: text('description'),
+  date: date('date'),
+  images: jsonb('images').$type<string[]>().default([]),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 export const allTables = {
   adminUsers,
   typeObjava,
@@ -137,4 +157,6 @@ export const allTables = {
   proekti,
   agenda,
   institucii,
+  kultura,
+  sport,
 };

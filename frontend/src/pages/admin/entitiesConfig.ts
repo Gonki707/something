@@ -141,6 +141,28 @@ export const ADMIN_ENTITIES: Record<string, EntityCfg> = {
     canCreate: true,
     fields: [{ key: 'title', label: 'Назив', type: 'text', required: true, showInList: true }],
   },
+  'kultura': {
+    label: 'Култура',
+    canCreate: true,
+    fields: [
+      { key: 'title', label: 'Наслов', type: 'text', required: true, showInList: true },
+      { key: 'picture', label: 'Слика', type: 'image' },
+      { key: 'description', label: 'Опис', type: 'textarea' },
+      { key: 'date', label: 'Датум', type: 'date', showInList: true },
+      { key: 'images', label: 'Галерија слики', type: 'documents' },
+    ],
+  },
+  'sport': {
+    label: 'Спорт',
+    canCreate: true,
+    fields: [
+      { key: 'title', label: 'Наслов', type: 'text', required: true, showInList: true },
+      { key: 'picture', label: 'Слика', type: 'image' },
+      { key: 'description', label: 'Опис', type: 'textarea' },
+      { key: 'date', label: 'Датум', type: 'date', showInList: true },
+      { key: 'images', label: 'Галерија слики', type: 'documents' },
+    ],
+  },
   'admin-users': {
     label: 'Админ корисници',
     canCreate: true,

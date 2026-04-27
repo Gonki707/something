@@ -20,6 +20,8 @@ import {
   proekti,
   agenda,
   institucii,
+  kultura,
+  sport,
 } from '../db/schema.js';
 
 type WithId<T extends PgTable> = T & { id: PgColumn };
@@ -405,6 +407,66 @@ function toInstitucijaUpdate(i: z.output<typeof institucijaUpdate>): Partial<Ins
   return out;
 }
 
+// ---------- kultura ----------
+type KulturaInsert = typeof kultura.$inferInsert;
+const kulturaCreate = z.object({
+  title: trimmed.min(1).max(500),
+  picture: optText,
+  description: optText,
+  date: optDate,
+  images: optDocs,
+});
+const kulturaUpdate = kulturaCreate.partial();
+
+function toKulturaInsert(i: z.output<typeof kulturaCreate>): KulturaInsert {
+  return {
+    title: i.title,
+    picture: i.picture ?? null,
+    description: i.description ?? null,
+    date: dateOnly(i.date) ?? null,
+    images: i.images ?? [],
+  };
+}
+function toKulturaUpdate(i: z.output<typeof kulturaUpdate>): Partial<KulturaInsert> {
+  const out: Partial<KulturaInsert> = {};
+  if (i.title !== undefined) out.title = i.title;
+  if (i.picture !== undefined) out.picture = i.picture;
+  if (i.description !== undefined) out.description = i.description;
+  if (i.date !== undefined) out.date = dateOnly(i.date);
+  if (i.images !== undefined) out.images = i.images;
+  return out;
+}
+
+// ---------- sport ----------
+type SportInsert = typeof sport.$inferInsert;
+const sportCreate = z.object({
+  title: trimmed.min(1).max(500),
+  picture: optText,
+  description: optText,
+  date: optDate,
+  images: optDocs,
+});
+const sportUpdate = sportCreate.partial();
+
+function toSportInsert(i: z.output<typeof sportCreate>): SportInsert {
+  return {
+    title: i.title,
+    picture: i.picture ?? null,
+    description: i.description ?? null,
+    date: dateOnly(i.date) ?? null,
+    images: i.images ?? [],
+  };
+}
+function toSportUpdate(i: z.output<typeof sportUpdate>): Partial<SportInsert> {
+  const out: Partial<SportInsert> = {};
+  if (i.title !== undefined) out.title = i.title;
+  if (i.picture !== undefined) out.picture = i.picture;
+  if (i.description !== undefined) out.description = i.description;
+  if (i.date !== undefined) out.date = dateOnly(i.date);
+  if (i.images !== undefined) out.images = i.images;
+  return out;
+}
+
 // ---------- adminUsers ----------
 type AdminUserInsert = typeof adminUsers.$inferInsert;
 const adminUserCreate = z.object({
@@ -467,6 +529,8 @@ const legislativaRD = readDeleteHandlers(legislativa);
 const proektiRD = readDeleteHandlers(proekti);
 const agendaRD = readDeleteHandlers(agenda, asc(agenda.dateTime));
 const institucijaRD = readDeleteHandlers(institucii);
+const kulturaRD = readDeleteHandlers(kultura, desc(kultura.createdAt));
+const sportRD = readDeleteHandlers(sport, desc(sport.createdAt));
 
 // adminUsers — replace the generic read handlers with ones that strip passwordHash
 // from responses by selecting a public-only column projection.
@@ -609,6 +673,32 @@ const entities: Record<string, Handlers> = {
     }),
   ),
 
+  'kultura': entityHandlers(kultura, kulturaRD,
+    makeCreate(kulturaCreate, async (data) => {
+      const [row] = await db.insert(kultura).values(toKulturaInsert(data)).returning();
+      return row;
+    }),
+    makeUpdate(kulturaUpdate, async (id, data) => {
+      const set = toKulturaUpdate(data);
+      if (Object.keys(set).length === 0) return undefined;
+      const [row] = await db.update(kultura).set(set).where(eq(kultura.id, id)).returning();
+      return row;
+    }),
+  ),
+
+  'sport': entityHandlers(sport, sportRD,
+    makeCreate(sportCreate, async (data) => {
+      const [row] = await db.insert(sport).values(toSportInsert(data)).returning();
+      return row;
+    }),
+    makeUpdate(sportUpdate, async (id, data) => {
+      const set = toSportUpdate(data);
+      if (Object.keys(set).length === 0) return undefined;
+      const [row] = await db.update(sport).set(set).where(eq(sport.id, id)).returning();
+      return row;
+    }),
+  ),
+
   'admin-users': {
     ...adminUserRD,
     create: makeCreate(adminUserCreate, async (data) => {
@@ -629,6 +719,7 @@ const PUBLIC_READ = [
   'type-objava', 'type-legislativa', 'type-of-problems', 'naseleni-mesta',
   'odnosi-so-javnost', 'sluzben-glasnik', 'vraboteni', 'budzet',
   'legislativa', 'proekti', 'agenda', 'institucii',
+  'kultura', 'sport',
 ];
 
 export const publicRouter: Router = Router();
