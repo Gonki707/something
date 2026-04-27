@@ -25,6 +25,15 @@ export function buildApp() {
   app.use('/api/public', publicRouter);
   app.use('/api/admin', adminRouter);
 
+  // Serve frontend static files in production
+  if (process.env.NODE_ENV === 'production') {
+    const distPath = path.resolve(process.cwd(), '../frontend/dist');
+    app.use(express.static(distPath));
+    app.get('*', (_req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  }
+
   app.use(errorHandler);
   return app;
 }

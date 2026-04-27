@@ -4,6 +4,14 @@ modules = ["nodejs-24", "postgresql-16"]
 router = "application"
 deploymentTarget = "autoscale"
 
+[deployment.build]
+args = ["sh", "-c", "pnpm install && (cd backend && npm install && npm run build) && (cd frontend && npm install && npm run build)"]
+env = { "CI" = "true", "NODE_ENV" = "production" }
+
+[deployment.run]
+args = ["sh", "-c", "cd backend && NODE_ENV=production npm start"]
+env = { "NODE_ENV" = "production" }
+
 [deployment.postBuild]
 args = ["pnpm", "store", "prune"]
 env = { "CI" = "true" }
