@@ -249,7 +249,7 @@ h3 { font-size: 1.25rem; letter-spacing: -0.015em; }
 .org-row { display: flex; gap: .75rem; flex-wrap: wrap; justify-content: center; }
 .org-row .org-node { min-width: 180px; font-size: .9rem; }
 .org-connector { width: 2px; height: 22px; background: var(--accent-2); }
-.hero .container { position: relative; }
+.hero .container { position: relative; z-index: 2; }
 .hero h1 { color: #fff; max-width: 820px; }
 .hero p { font-size: 1.15rem; max-width: 720px; opacity: .92; }
 .hero-cta { margin-top: 1.5rem; display: flex; gap: .75rem; flex-wrap: wrap; }
