@@ -101,7 +101,7 @@ export default function UsefulLinksSlider() {
               ref={(el) => { itemRefs.current[idx] = el; }}
             >
               <div className="slider-item-inner">
-                <div className="slider-logo-wrap" style={{ backgroundColor: '#8b1e1e' }}>
+                <div className="slider-logo-wrap" style={{ backgroundColor: '#5a0d0d' }}>
                   <img
                     src={item.img}
                     alt={item.name}
