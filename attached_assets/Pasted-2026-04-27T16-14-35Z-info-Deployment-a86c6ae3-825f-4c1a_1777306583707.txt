@@ -1,0 +1,99 @@
+2026-04-27T16:14:35Z info: Deployment: a86c6ae3-825f-4c1a-b2ac-d51506436ed1
+2026-04-27T16:14:35Z info: Build: cb0eefeb-8b46-40b8-8c6d-320ca1fda335
+2026-04-27T16:14:36Z info: Running Security Scan
+2026-04-27T16:14:42Z info: Security Scan Complete
+2026-04-27T16:14:45Z info: Preparing development database data
+2026-04-27T16:14:51Z info: Successfully copied development database data to production database
+2026-04-27T16:14:53Z info: Installing packages
+--> pnpm install
+
+Scope: all 9 workspace projects
+
+
+   ╭──────────────────────────────────────────╮
+   │                                          │
+   │   Update available! 10.26.1 → 10.33.2.   │
+   │   Changelog: https://pnpm.io/v/10.33.2   │
+   │     To update, run: pnpm add -g pnpm     │
+   │                                          │
+   ╰──────────────────────────────────────────╯
+
+
+Lockfile is up to date, resolution step is skipped
+
+Progress: resolved 1, reused 0, downloaded 0, added 0
+
+Packages: +486
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Progress: resolved 486, reused 0, downloaded 136, added 92
+
+Progress: resolved 486, reused 0, downloaded 245, added 142
+
+Progress: resolved 486, reused 0, downloaded 290, added 157
+
+Progress: resolved 486, reused 0, downloaded 302, added 161
+
+Progress: resolved 486, reused 0, downloaded 400, added 211
+
+Progress: resolved 486, reused 0, downloaded 467, added 250
+
+Progress: resolved 486, reused 0, downloaded 485, added 305
+
+Progress: resolved 486, reused 0, downloaded 486, added 485
+
+Progress: resolved 486, reused 0, downloaded 486, added 486, done
+
+.../esbuild@0.27.3/node_modules/esbuild postinstall$ node install.js
+
+.../esbuild@0.27.3/node_modules/esbuild postinstall: Done
+
+
+devDependencies:
++ prettier 3.8.1
++ typescript 5.9.3
+
+
+. preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+
+. preinstall: Done
+
+Done in 10.3s using pnpm v10.26.1
+
+2026-04-27T16:15:03Z info: Starting Build
+Scope: all 9 workspace projects
+
+Lockfile is up to date, resolution step is skipped
+
+Already up to date
+
+. preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+
+. preinstall: Done
+
+Done in 1.4s using pnpm v10.26.1
+
+
+removed 38 packages, and audited 115 packages in 2s
+
+
+20 packages are looking for funding
+  run `npm fund` for details
+
+
+2 high severity vulnerabilities
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+
+
+> mavrovo-backend@1.0.0 build
+> tsc -p tsconfig.json
+
+
+error TS2688: Cannot find type definition file for 'node'.
+  The file is in the program because:
+    Entry point of type library 'node' specified in compilerOptions
+
