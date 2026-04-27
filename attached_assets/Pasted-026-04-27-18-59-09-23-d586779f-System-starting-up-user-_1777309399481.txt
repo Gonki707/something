@@ -1,0 +1,161 @@
+026-04-27 18:59:09.23
+d586779f
+System
+starting up user application
+
+2026-04-27 18:59:09.23
+d586779f
+System
+forwarding local port 8081 to external port 80 (mapped as 1104)
+2026-04-27 18:59:12.22
+d586779f
+User
+> node dist/index.js
+2026-04-27 18:59:12.22
+d586779f
+User
+> mavrovo-backend@1.0.0 start
+2026-04-27 18:59:12.33
+d586779f
+User
+code: 'MODULE_NOT_FOUND',
+2026-04-27 18:59:12.33
+d586779f
+User
+throw err;
+2026-04-27 18:59:12.33
+d586779f
+User
+at defaultResolveImpl (node:internal/modules/cjs/loader:1059:19)
+2026-04-27 18:59:12.33
+d586779f
+User
+}
+2026-04-27 18:59:12.33
+d586779f
+User
+at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-04-27 18:59:12.33
+d586779f
+User
+at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1064:22)
+2026-04-27 18:59:12.33
+d586779f
+User
+requireStack: []
+2026-04-27 18:59:12.33
+d586779f
+User
+Error: Cannot find module '/home/runner/workspace/backend/dist/index.js'
+2026-04-27 18:59:12.33
+d586779f
+User
+at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-04-27 18:59:12.33
+d586779f
+User
+node:internal/modules/cjs/loader:1424
+2026-04-27 18:59:12.33
+d586779f
+User
+at Module._load (node:internal/modules/cjs/loader:1227:37)
+2026-04-27 18:59:12.33
+d586779f
+User
+at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+2026-04-27 18:59:12.33
+d586779f
+User
+at node:internal/main/run_main_module:33:47 {
+2026-04-27 18:59:12.33
+d586779f
+User
+at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+2026-04-27 18:59:14.77
+d586779f
+User
+> mavrovo-backend@1.0.0 start
+2026-04-27 18:59:14.77
+d586779f
+User
+> node dist/index.js
+2026-04-27 18:59:14.83
+d586779f
+User
+at defaultResolveImpl (node:internal/modules/cjs/loader:1059:19)
+2026-04-27 18:59:14.83
+d586779f
+User
+at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+2026-04-27 18:59:14.83
+d586779f
+User
+at node:internal/main/run_main_module:33:47 {
+2026-04-27 18:59:14.83
+d586779f
+User
+^
+2026-04-27 18:59:14.83
+d586779f
+User
+at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1064:22)
+2026-04-27 18:59:14.83
+d586779f
+User
+at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-04-27 18:59:14.83
+d586779f
+User
+at Module._load (node:internal/modules/cjs/loader:1227:37)
+2026-04-27 18:59:14.83
+d586779f
+User
+}
+2026-04-27 18:59:14.83
+d586779f
+User
+code: 'MODULE_NOT_FOUND',
+2026-04-27 18:59:14.83
+d586779f
+User
+Error: Cannot find module '/home/runner/workspace/backend/dist/index.js'
+2026-04-27 18:59:14.83
+d586779f
+User
+requireStack: []
+2026-04-27 18:59:14.83
+d586779f
+User
+Node.js v24.13.0
+2026-04-27 18:59:14.83
+d586779f
+User
+throw err;
+2026-04-27 18:59:14.83
+d586779f
+User
+at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+2026-04-27 18:59:14.83
+d586779f
+User
+at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-04-27 18:59:14.84
+d586779f
+System
+command finished with error [sh -c cd backend && NODE_ENV=production npm start]: exit status 1
+2026-04-27 18:59:23.52
+d586779f
+User
+> mavrovo-backend@1.0.0 start
+2026-04-27 18:59:23.52
+d586779f
+User
+> node dist/index.js
+2026-04-27 18:59:23.56
+d586779f
+User
+Error: Cannot find module '/home/runner/workspace/backend/dist/index.js'
+2026-04-27 18:59:23.56
+d586779f
+User
+^

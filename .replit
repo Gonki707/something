@@ -3,8 +3,8 @@ modules = ["nodejs-24", "postgresql-16"]
 [deployment]
 router = "application"
 deploymentTarget = "autoscale"
-build = ["sh", "-c", "pnpm install && (cd backend && npm install --include=dev && npm run build) && (cd frontend && npm install --include=dev && npm run build)"]
-run = ["sh", "-c", "cd backend && NODE_ENV=production npm start"]
+build = ["sh", "-c", "pnpm install && (cd backend && npm install --include=dev) && (cd frontend && npm install --include=dev && npm run build)"]
+run = ["sh", "-c", "(test -f frontend/dist/index.html || (cd frontend && npm install --include=dev && npm run build)) && cd backend && NODE_ENV=production npm start"]
 
 [deployment.postBuild]
 args = ["pnpm", "store", "prune"]
